@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { db, schema } from '@/db/client';
-import { and, eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/session';
 import { saveUploadedImage } from '@/lib/uploads';
 import { getInswapStandings, sortStandings } from '@/lib/inswap';
+import ThumbButton from './_thumb-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,28 +24,6 @@ async function uploadPhoto(formData: FormData) {
     redirect(`/inswap?err=${encodeURIComponent(code)}`);
   }
   redirect('/inswap#mine');
-}
-
-async function toggleThumbsUp(formData: FormData) {
-  'use server';
-  const s = await getSession();
-  if (!s.userId) redirect('/login');
-  const photoId = Number(formData.get('photo_id'));
-  if (!Number.isFinite(photoId)) redirect('/inswap');
-  // Toggle: if exists, delete; else insert.
-  const existing = await db
-    .select()
-    .from(schema.photoVotes)
-    .where(and(eq(schema.photoVotes.photoId, photoId), eq(schema.photoVotes.userId, s.userId!)))
-    .limit(1);
-  if (existing.length > 0) {
-    await db
-      .delete(schema.photoVotes)
-      .where(and(eq(schema.photoVotes.photoId, photoId), eq(schema.photoVotes.userId, s.userId!)));
-  } else {
-    await db.insert(schema.photoVotes).values({ photoId, userId: s.userId! });
-  }
-  redirect('/inswap');
 }
 
 async function deletePhoto(formData: FormData) {
@@ -116,7 +95,7 @@ export default async function InswapPage({ searchParams }: { searchParams: Promi
             const mine = session.userId === p.userId;
             const iVoted = myVotes.has(p.photoId);
             return (
-              <div key={p.photoId} className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:bg-white/5">
+              <div key={p.photoId} className="overflow-hidden border-[3px] border-black bg-white shadow-brutal-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.filePath} alt={p.caption ?? 'InSwap entry'} className="aspect-square w-full object-cover" />
                 <div className="p-3 text-sm">
@@ -126,21 +105,12 @@ export default async function InswapPage({ searchParams }: { searchParams: Promi
                     <span className="text-xs opacity-60">
                       H2H {p.hotOrNotWins}–{p.hotOrNotLosses}
                     </span>
-                    {session.userId ? (
-                      <form action={toggleThumbsUp}>
-                        <input type="hidden" name="photo_id" value={p.photoId} />
-                        <button
-                          className={`rounded-full border px-3 py-1 text-sm ${
-                            iVoted ? 'border-black bg-neon-lime text-white' : 'border-black/10 hover:border-black'
-                          }`}
-                          type="submit"
-                        >
-                          👍 {p.thumbsUp}
-                        </button>
-                      </form>
-                    ) : (
-                      <span className="rounded-full border border-black/10 px-3 py-1 text-sm">👍 {p.thumbsUp}</span>
-                    )}
+                    <ThumbButton
+                      photoId={p.photoId}
+                      initialVoted={iVoted}
+                      initialCount={p.thumbsUp}
+                      disabled={!session.userId}
+                    />
                   </div>
                   {(mine || session.isAdmin) && (
                     <form action={deletePhoto} className="mt-2">

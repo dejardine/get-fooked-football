@@ -16,6 +16,7 @@ const NAV: Array<[string, string]> = [
   ['InSwap', '/inswap'],
   ['Prizes', '/prizes'],
   ['Polymarket', '/polymarket'],
+  ['Help', '/help'],
 ];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

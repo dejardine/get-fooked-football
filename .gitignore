@@ -9,3 +9,4 @@ dist/
 public/uploads/*
 !public/uploads/.gitkeep
 drizzle/meta/
+tsconfig.tsbuildinfo

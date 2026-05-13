@@ -34,14 +34,19 @@ export default async function HomePage() {
       <section className="brutal-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">Welcome to GF Football ⚽</h1>
-            <p className="opacity-70">2026 World Cup tipping for the crew. {(userCount.rows[0] as { c: number }).c} players in. ${(fixtureCount.rows[0] as { c: number }).c} fixtures loaded. {(teamCount.rows[0] as { c: number }).c} teams to win.</p>
+            <h1 className="brutal-h1">Get Fooked ⚽</h1>
+            <p className="opacity-70 mt-2">
+              2026 World Cup tipping for the crew. {(userCount.rows[0] as { c: number }).c} player
+              {(userCount.rows[0] as { c: number }).c === 1 ? '' : 's'} in · {(fixtureCount.rows[0] as { c: number }).c} fixtures loaded ·{' '}
+              {(teamCount.rows[0] as { c: number }).c} teams to win.
+            </p>
           </div>
-          {!session.userId && (
-            <div className="flex gap-2">
+          <div className="flex gap-2">
+            {!session.userId && (
               <Link href="/login" className="brutal-btn-primary">Sign in</Link>
-            </div>
-          )}
+            )}
+            <Link href="/help" className="brutal-btn-ghost text-sm">How it works →</Link>
+          </div>
         </div>
       </section>
 
@@ -89,16 +94,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="brutal-card">
-        <h2 className="mb-3 text-lg font-semibold">How it works</h2>
-        <ol className="list-decimal space-y-1 pl-5 opacity-80">
-          <li>You get invited and register with the token you’re given.</li>
-          <li>Once the admin runs the draw, you’ll be randomly allocated a handful of teams. Any leftover teams go into a special pot for fun side prizes.</li>
-          <li>Points accumulate automatically as results are entered (group win = 3, draw = 1, plus a point per goal scored capped at 4, plus bonus points for advancing through knockouts).</li>
-          <li>Leaderboards aren’t just total points — there’s also boards weighted by your teams’ <em>combined population</em>, by <em>total sheep population</em>, and more.</li>
-          <li>The <strong>InSwap League</strong> photo comp runs alongside — upload a face-swap, get thumbs up, settle ties hot-or-not style.</li>
-        </ol>
-      </section>
     </div>
   );
 }
