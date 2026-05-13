@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #f5f3ec;
+  --ink: #0a0a0a;
+  --neon-lime: #c6ff3a;
+  --neon-cyan: #3affff;
+  --neon-pink: #ff3da3;
+  --neon-yellow: #ffd23f;
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100%;
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The page is striped with a faint pitch pattern in the background — totally optional. */
+body {
+  background-image:
+    radial-gradient(circle at 15% 10%, rgba(198, 255, 58, 0.18), transparent 35%),
+    radial-gradient(circle at 85% 80%, rgba(58, 255, 255, 0.15), transparent 40%);
+}
+
+/* ------------------------------------------------------------------
+   Neobrutalist base components — chunky borders, hard shadows, bold type.
+   Designed to be composed via Tailwind's @apply.
+------------------------------------------------------------------- */
+@layer components {
+  .brutal-card {
+    @apply rounded-none border-[3px] border-black bg-paper p-5 shadow-brutal;
+  }
+  .brutal-card-inner {
+    @apply rounded-none border-[3px] border-black bg-white/70 p-4 shadow-brutal-sm;
+  }
+
+  .brutal-h1 {
+    @apply text-3xl md:text-4xl font-black uppercase leading-none tracking-tight;
+  }
+  .brutal-h2 {
+    @apply text-xl font-black uppercase leading-none tracking-tight;
+  }
+
+  .brutal-input {
+    @apply block w-full rounded-none border-[3px] border-black bg-white px-3 py-2 font-mono shadow-brutal-sm outline-none focus:translate-x-[1px] focus:translate-y-[1px] focus:shadow-none;
+  }
+
+  .brutal-btn {
+    @apply inline-flex select-none items-center justify-center rounded-none border-[3px] border-black px-4 py-2 font-bold uppercase tracking-wide shadow-brutal-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50;
+  }
+  .brutal-btn-primary {
+    @apply brutal-btn bg-neon-lime text-black hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-brutal;
+  }
+  .brutal-btn-pink {
+    @apply brutal-btn bg-neon-pink text-black;
+  }
+  .brutal-btn-cyan {
+    @apply brutal-btn bg-neon-cyan text-black;
+  }
+  .brutal-btn-ghost {
+    @apply brutal-btn bg-white;
+  }
+  .brutal-btn-yes {
+    @apply brutal-btn bg-neon-lime px-3 py-1 text-xs;
+  }
+  .brutal-btn-no {
+    @apply brutal-btn bg-neon-pink px-3 py-1 text-xs;
+  }
+
+  .brutal-pill {
+    @apply inline-flex items-center rounded-full border-[2px] border-black bg-white px-2 py-0.5 font-bold uppercase;
+  }
+  .brutal-error {
+    @apply rounded-none border-[3px] border-black bg-neon-pink p-2 font-bold text-black shadow-brutal-sm;
+  }
+
+  .brutal-link {
+    @apply font-bold underline decoration-[3px] underline-offset-4 hover:text-neon-pink;
+  }
+
+  .brutal-emoji-btn {
+    @apply h-10 w-10 select-none rounded-none border-[2px] border-black bg-white text-xl shadow-brutal-sm transition-transform hover:-translate-y-[1px] hover:bg-neon-yellow active:translate-x-[1px] active:translate-y-[1px] active:shadow-none;
+  }
+
+  .brutal-canvas {
+    @apply rounded-none border-[3px] border-black bg-white;
+    background-image:
+      linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .brutal-chart {
+    @apply rounded-none border-[3px] border-black bg-white;
+  }
+
+  .table-row-hover tr:hover td {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* Dark canvas for the polymarket page when used inside a dark wrapper. */
+.dark-section {
+  background: #0a0a0a;
+  color: #f5f3ec;
+}
+.dark-section .brutal-card {
+  background: #0a0a0a;
+  border-color: #f5f3ec;
+  color: #f5f3ec;
+  box-shadow: 6px 6px 0 0 #c6ff3a;
+}

@@ -1,0 +1,189 @@
+import { pgTable, serial, text, integer, boolean, timestamp, uniqueIndex, index, primaryKey, varchar, jsonb } from 'drizzle-orm/pg-core';
+
+export const users = pgTable(
+  'users',
+  {
+    id: serial('id').primaryKey(),
+    email: text('email').notNull(),
+    name: text('name').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    isAdmin: boolean('is_admin').notNull().default(false),
+    paid: boolean('paid').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    emailIdx: uniqueIndex('users_email_idx').on(t.email),
+  }),
+);
+
+export const invites = pgTable(
+  'invites',
+  {
+    token: varchar('token', { length: 64 }).primaryKey(),
+    email: text('email'),
+    note: text('note'),
+    usedByUserId: integer('used_by_user_id').references(() => users.id),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdByUserId: integer('created_by_user_id').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+);
+
+export const teams = pgTable(
+  'teams',
+  {
+    id: serial('id').primaryKey(),
+    code: varchar('code', { length: 3 }).notNull(),
+    name: text('name').notNull(),
+    flag: text('flag').notNull(),
+    groupName: varchar('group_name', { length: 2 }).notNull(),
+    fifaRank: integer('fifa_rank').notNull().default(999),
+    population: integer('population').notNull().default(0),
+    sheep: integer('sheep').notNull().default(0),
+    // freeform extra stats so adding "by avg height" etc later is just a row
+    stats: jsonb('stats').notNull().default({}),
+  },
+  (t) => ({
+    codeIdx: uniqueIndex('teams_code_idx').on(t.code),
+  }),
+);
+
+export const teamAssignments = pgTable(
+  'team_assignments',
+  {
+    teamId: integer('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+    isLeftover: boolean('is_leftover').notNull().default(false),
+    assignedAt: timestamp('assigned_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.teamId] }),
+    userIdx: index('team_assignments_user_idx').on(t.userId),
+  }),
+);
+
+export const fixtures = pgTable(
+  'fixtures',
+  {
+    id: serial('id').primaryKey(),
+    kickoff: timestamp('kickoff', { withTimezone: true }).notNull(),
+    stage: text('stage').notNull(), // 'GROUP' | 'R32' | 'R16' | 'QF' | 'SF' | '3RD' | 'FINAL'
+    groupName: varchar('group_name', { length: 2 }),
+    venue: text('venue'),
+    homeTeamId: integer('home_team_id').references(() => teams.id),
+    awayTeamId: integer('away_team_id').references(() => teams.id),
+    homeLabel: text('home_label'), // for KO rounds before draw is known: "Winner A1"
+    awayLabel: text('away_label'),
+    homeScore: integer('home_score'),
+    awayScore: integer('away_score'),
+    homeScoreEt: integer('home_score_et'),
+    awayScoreEt: integer('away_score_et'),
+    homePens: integer('home_pens'),
+    awayPens: integer('away_pens'),
+    status: text('status').notNull().default('SCHEDULED'), // SCHEDULED | LIVE | FINISHED
+  },
+  (t) => ({
+    kickoffIdx: index('fixtures_kickoff_idx').on(t.kickoff),
+  }),
+);
+
+export const prizes = pgTable('prizes', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  amountNzd: integer('amount_nzd').notNull().default(0),
+  // 'GRAND' | 'BOARD' | 'SPECIAL' | 'INSWAP'
+  category: text('category').notNull().default('SPECIAL'),
+  // links to a leaderboard kind (e.g. 'population', 'sheep', 'overall') if board-based
+  boardKey: text('board_key'),
+  awardedUserId: integer('awarded_user_id').references(() => users.id),
+  awardedAt: timestamp('awarded_at', { withTimezone: true }),
+  sortOrder: integer('sort_order').notNull().default(0),
+});
+
+export const photos = pgTable(
+  'photos',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    filePath: text('file_path').notNull(),
+    caption: text('caption'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index('photos_user_idx').on(t.userId),
+  }),
+);
+
+export const photoVotes = pgTable(
+  'photo_votes',
+  {
+    photoId: integer('photo_id').notNull().references(() => photos.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.photoId, t.userId] }),
+  }),
+);
+
+export const hotOrNotVotes = pgTable(
+  'hot_or_not_votes',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    winnerPhotoId: integer('winner_photo_id').notNull().references(() => photos.id, { onDelete: 'cascade' }),
+    loserPhotoId: integer('loser_photo_id').notNull().references(() => photos.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userMatchIdx: index('hot_or_not_user_match_idx').on(t.userId, t.winnerPhotoId, t.loserPhotoId),
+  }),
+);
+
+export const scoreEdits = pgTable(
+  'score_edits',
+  {
+    id: serial('id').primaryKey(),
+    fixtureId: integer('fixture_id').notNull().references(() => fixtures.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    homeScore: integer('home_score'),
+    awayScore: integer('away_score'),
+    homePens: integer('home_pens'),
+    awayPens: integer('away_pens'),
+    status: text('status').notNull(),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    fixtureIdx: index('score_edits_fixture_idx').on(t.fixtureId, t.createdAt),
+  }),
+);
+
+export const matchStickers = pgTable(
+  'match_stickers',
+  {
+    id: serial('id').primaryKey(),
+    fixtureId: integer('fixture_id').notNull().references(() => fixtures.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    // 'emoji' = `content` holds a single grapheme; 'image' = `filePath` is a /uploads/... path
+    kind: text('kind').notNull(),
+    content: text('content'),
+    filePath: text('file_path'),
+    // freeform x,y position 0..1 for placement on the match canvas
+    posX: integer('pos_x').notNull().default(50),
+    posY: integer('pos_y').notNull().default(50),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    fixtureIdx: index('match_stickers_fixture_idx').on(t.fixtureId),
+  }),
+);
+
+export type User = typeof users.$inferSelect;
+export type Team = typeof teams.$inferSelect;
+export type Fixture = typeof fixtures.$inferSelect;
+export type Prize = typeof prizes.$inferSelect;
+export type Photo = typeof photos.$inferSelect;
+export type ScoreEdit = typeof scoreEdits.$inferSelect;
+export type MatchSticker = typeof matchStickers.$inferSelect;
