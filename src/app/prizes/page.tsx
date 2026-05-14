@@ -32,7 +32,7 @@ export default async function PrizesPage() {
   return (
     <div className="space-y-6">
       <div className="brutal-card">
-        <h1 className="brutal-h1">[ Prizes ]</h1>
+        <h1 className="brutal-h1 brutal-heading-cyan">[ Prizes ]</h1>
         <p className="text-sm opacity-100 mt-2">
           ${buyIn} buy-in · {playerCount} player{playerCount === 1 ? '' : 's'} ·{' '}
           <strong>${pot.toFixed(0)} pot</strong>. Prize amounts are percentages of the pot, so they scale with the crew.

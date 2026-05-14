@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { getSession } from '@/lib/session';
 import { buildLeaderboard } from '@/lib/leaderboards';
 import { fmtNzDateTime, nzZoneAbbr } from '@/lib/format';
+import { tagClassForGroup } from '@/lib/group-color';
 import PolymarketWidget from './_polymarket-widget';
 import LeaderboardWidget from './_leaderboard-widget';
 
@@ -38,7 +39,7 @@ export default async function HomePage() {
       <section className="brutal-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="brutal-h1">Get Fooked ⚽</h1>
+            <h1 className="brutal-h1 brutal-heading-magenta">Get Fooked ⚽</h1>
             <p className="opacity-100 mt-2">
               2026 World Cup tipping for cunts. {(fixtureCount.rows[0] as { c: number }).c} fixtures loaded.{' '}
               {(teamCount.rows[0] as { c: number }).c} teams to win.
@@ -84,9 +85,15 @@ export default async function HomePage() {
                   <span className="tabular-nums font-bold">
                     {fmtNzDateTime(date)} {nzZoneAbbr(date)}
                   </span>
-                  <span className="hidden sm:inline-block border-[2px] border-current px-1.5 py-0 uppercase font-bold">
-                    {stage}{group ? ` ${group}` : ''}
-                  </span>
+                  {group ? (
+                    <span className={`hidden sm:inline-flex ${tagClassForGroup(group)} text-[10px] leading-none`}>
+                      Group {group}
+                    </span>
+                  ) : (
+                    <span className="hidden sm:inline-block border-[2px] border-current px-1.5 py-0 uppercase font-bold">
+                      {stage}
+                    </span>
+                  )}
                 </div>
               </Link>
             );

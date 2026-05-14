@@ -1,0 +1,105 @@
+DateTime (ISO 8601 NZST),Stage,Group/Bracket,Home,Away,Venue,City
+2026-06-12T07:00:00+12:00,First Stage,Group A,MEX,RSA,Mexico City Stadium,Mexico City
+2026-06-12T14:00:00+12:00,First Stage,Group A,KOR,CZE,Guadalajara Stadium,Guadalajara
+2026-06-13T07:00:00+12:00,First Stage,Group B,CAN,BIH,Toronto Stadium,Toronto
+2026-06-13T13:00:00+12:00,First Stage,Group D,USA,PAR,Los Angeles Stadium,Los Angeles
+2026-06-14T07:00:00+12:00,First Stage,Group B,QAT,SUI,San Francisco Bay Area Stadium,San Francisco Bay Area
+2026-06-14T10:00:00+12:00,First Stage,Group C,BRA,MAR,New York/New Jersey Stadium,New York
+2026-06-14T13:00:00+12:00,First Stage,Group C,HAI,SCO,Boston Stadium,Boston
+2026-06-14T16:00:00+12:00,First Stage,Group D,AUS,TUR,BC Place Vancouver,Vancouver
+2026-06-15T05:00:00+12:00,First Stage,Group E,GER,CUW,Houston Stadium,Houston
+2026-06-15T08:00:00+12:00,First Stage,Group F,NED,JPN,Dallas Stadium,Dallas
+2026-06-15T11:00:00+12:00,First Stage,Group E,CIV,ECU,Philadelphia Stadium,Philadelphia
+2026-06-15T14:00:00+12:00,First Stage,Group F,SWE,TUN,Monterrey Stadium,Monterrey
+2026-06-16T04:00:00+12:00,First Stage,Group H,ESP,CPV,Atlanta Stadium,Atlanta
+2026-06-16T07:00:00+12:00,First Stage,Group G,BEL,EGY,Seattle Stadium,Seattle
+2026-06-16T10:00:00+12:00,First Stage,Group H,KSA,URU,Miami Stadium,Miami
+2026-06-16T13:00:00+12:00,First Stage,Group G,IRN,NZL,Los Angeles Stadium,Los Angeles
+2026-06-17T07:00:00+12:00,First Stage,Group I,FRA,SEN,New York/New Jersey Stadium,New York
+2026-06-17T10:00:00+12:00,First Stage,Group I,IRQ,NOR,Boston Stadium,Boston
+2026-06-17T13:00:00+12:00,First Stage,Group J,ARG,ALG,Kansas City Stadium,Kansas City
+2026-06-17T16:00:00+12:00,First Stage,Group J,AUT,JOR,San Francisco Bay Area Stadium,San Francisco Bay Area
+2026-06-18T05:00:00+12:00,First Stage,Group K,POR,COD,Houston Stadium,Houston
+2026-06-18T08:00:00+12:00,First Stage,Group L,ENG,CRO,Dallas Stadium,Dallas
+2026-06-18T11:00:00+12:00,First Stage,Group L,GHA,PAN,Toronto Stadium,Toronto
+2026-06-18T14:00:00+12:00,First Stage,Group K,UZB,COL,Mexico City Stadium,Mexico City
+2026-06-19T04:00:00+12:00,First Stage,Group A,CZE,RSA,Atlanta Stadium,Atlanta
+2026-06-19T07:00:00+12:00,First Stage,Group B,SUI,BIH,Los Angeles Stadium,Los Angeles
+2026-06-19T10:00:00+12:00,First Stage,Group B,CAN,QAT,BC Place Vancouver,Vancouver
+2026-06-19T13:00:00+12:00,First Stage,Group A,MEX,KOR,Guadalajara Stadium,Guadalajara
+2026-06-20T07:00:00+12:00,First Stage,Group D,USA,AUS,Seattle Stadium,Seattle
+2026-06-20T10:00:00+12:00,First Stage,Group C,SCO,MAR,Boston Stadium,Boston
+2026-06-20T12:30:00+12:00,First Stage,Group C,BRA,HAI,Philadelphia Stadium,Philadelphia
+2026-06-20T15:00:00+12:00,First Stage,Group D,TUR,PAR,San Francisco Bay Area Stadium,San Francisco Bay Area
+2026-06-21T05:00:00+12:00,First Stage,Group F,NED,SWE,Houston Stadium,Houston
+2026-06-21T08:00:00+12:00,First Stage,Group E,GER,CIV,Toronto Stadium,Toronto
+2026-06-21T12:00:00+12:00,First Stage,Group E,ECU,CUW,Kansas City Stadium,Kansas City
+2026-06-21T16:00:00+12:00,First Stage,Group F,TUN,JPN,Monterrey Stadium,Monterrey
+2026-06-22T04:00:00+12:00,First Stage,Group H,ESP,KSA,Atlanta Stadium,Atlanta
+2026-06-22T07:00:00+12:00,First Stage,Group G,BEL,IRN,Los Angeles Stadium,Los Angeles
+2026-06-22T10:00:00+12:00,First Stage,Group H,URU,CPV,Miami Stadium,Miami
+2026-06-22T13:00:00+12:00,First Stage,Group G,NZL,EGY,BC Place Vancouver,Vancouver
+2026-06-23T05:00:00+12:00,First Stage,Group J,ARG,AUT,Dallas Stadium,Dallas
+2026-06-23T09:00:00+12:00,First Stage,Group I,FRA,IRQ,Philadelphia Stadium,Philadelphia
+2026-06-23T12:00:00+12:00,First Stage,Group I,NOR,SEN,New York/New Jersey Stadium,New York
+2026-06-23T15:00:00+12:00,First Stage,Group J,JOR,ALG,San Francisco Bay Area Stadium,San Francisco Bay Area
+2026-06-24T05:00:00+12:00,First Stage,Group K,POR,UZB,Houston Stadium,Houston
+2026-06-24T08:00:00+12:00,First Stage,Group L,ENG,GHA,Boston Stadium,Boston
+2026-06-24T11:00:00+12:00,First Stage,Group L,PAN,CRO,Toronto Stadium,Toronto
+2026-06-24T14:00:00+12:00,First Stage,Group K,COL,COD,Guadalajara Stadium,Guadalajara
+2026-06-25T07:00:00+12:00,First Stage,Group B,SUI,CAN,BC Place Vancouver,Vancouver
+2026-06-25T07:00:00+12:00,First Stage,Group B,BIH,QAT,Seattle Stadium,Seattle
+2026-06-25T10:00:00+12:00,First Stage,Group C,SCO,BRA,Miami Stadium,Miami
+2026-06-25T10:00:00+12:00,First Stage,Group C,MAR,HAI,Atlanta Stadium,Atlanta
+2026-06-25T13:00:00+12:00,First Stage,Group A,CZE,MEX,Mexico City Stadium,Mexico City
+2026-06-25T13:00:00+12:00,First Stage,Group A,RSA,KOR,Monterrey Stadium,Monterrey
+2026-06-26T08:00:00+12:00,First Stage,Group E,CUW,CIV,Philadelphia Stadium,Philadelphia
+2026-06-26T08:00:00+12:00,First Stage,Group E,ECU,GER,New York/New Jersey Stadium,New York
+2026-06-26T11:00:00+12:00,First Stage,Group F,JPN,SWE,Dallas Stadium,Dallas
+2026-06-26T11:00:00+12:00,First Stage,Group F,TUN,NED,Kansas City Stadium,Kansas City
+2026-06-26T14:00:00+12:00,First Stage,Group D,TUR,USA,Los Angeles Stadium,Los Angeles
+2026-06-26T14:00:00+12:00,First Stage,Group D,PAR,AUS,San Francisco Bay Area Stadium,San Francisco Bay Area
+2026-06-27T07:00:00+12:00,First Stage,Group I,NOR,FRA,Boston Stadium,Boston
+2026-06-27T07:00:00+12:00,First Stage,Group I,SEN,IRQ,Toronto Stadium,Toronto
+2026-06-27T12:00:00+12:00,First Stage,Group H,CPV,KSA,Houston Stadium,Houston
+2026-06-27T12:00:00+12:00,First Stage,Group H,URU,ESP,Guadalajara Stadium,Guadalajara
+2026-06-27T15:00:00+12:00,First Stage,Group G,EGY,IRN,Seattle Stadium,Seattle
+2026-06-27T15:00:00+12:00,First Stage,Group G,NZL,BEL,BC Place Vancouver,Vancouver
+2026-06-28T09:00:00+12:00,First Stage,Group L,PAN,ENG,New York/New Jersey Stadium,New York
+2026-06-28T09:00:00+12:00,First Stage,Group L,CRO,GHA,Philadelphia Stadium,Philadelphia
+2026-06-28T11:30:00+12:00,First Stage,Group K,COL,POR,Miami Stadium,Miami
+2026-06-28T11:30:00+12:00,First Stage,Group K,COD,UZB,Atlanta Stadium,Atlanta
+2026-06-28T14:00:00+12:00,First Stage,Group J,ALG,AUT,Kansas City Stadium,Kansas City
+2026-06-28T14:00:00+12:00,First Stage,Group J,JOR,ARG,Dallas Stadium,Dallas
+2026-06-29T07:00:00+12:00,Round of 32,Bracket,2A,2B,Los Angeles Stadium,Los Angeles
+2026-06-30T05:00:00+12:00,Round of 32,Bracket,1C,2F,Houston Stadium,Houston
+2026-06-30T08:30:00+12:00,Round of 32,Bracket,1E,3ABCDF,Boston Stadium,Boston
+2026-06-30T13:00:00+12:00,Round of 32,Bracket,1F,2C,Monterrey Stadium,Monterrey
+2026-07-01T05:00:00+12:00,Round of 32,Bracket,2E,2I,Dallas Stadium,Dallas
+2026-07-01T09:00:00+12:00,Round of 32,Bracket,1I,3CDFGH,New York/New Jersey Stadium,New York
+2026-07-01T13:00:00+12:00,Round of 32,Bracket,1A,3CEFHI,Mexico City Stadium,Mexico City
+2026-07-02T04:00:00+12:00,Round of 32,Bracket,1L,3EHIJK,Atlanta Stadium,Atlanta
+2026-07-02T08:00:00+12:00,Round of 32,Bracket,1G,3AEHIJ,Seattle Stadium,Seattle
+2026-07-02T12:00:00+12:00,Round of 32,Bracket,1D,3BEFIJ,San Francisco Bay Area Stadium,San Francisco Bay Area
+2026-07-03T07:00:00+12:00,Round of 32,Bracket,1H,2J,Los Angeles Stadium,Los Angeles
+2026-07-03T11:00:00+12:00,Round of 32,Bracket,2K,2L,Toronto Stadium,Toronto
+2026-07-03T15:00:00+12:00,Round of 32,Bracket,1B,3EFGIJ,BC Place Vancouver,Vancouver
+2026-07-04T06:00:00+12:00,Round of 32,Bracket,2D,2G,Dallas Stadium,Dallas
+2026-07-04T10:00:00+12:00,Round of 32,Bracket,1J,2H,Miami Stadium,Miami
+2026-07-04T13:30:00+12:00,Round of 32,Bracket,1K,3DEIJL,Kansas City Stadium,Kansas City
+2026-07-05T05:00:00+12:00,Round of 16,Bracket,W73,W75,Houston Stadium,Houston
+2026-07-05T09:00:00+12:00,Round of 16,Bracket,W74,W77,Philadelphia Stadium,Philadelphia
+2026-07-06T08:00:00+12:00,Round of 16,Bracket,W76,W78,New York/New Jersey Stadium,New York
+2026-07-06T12:00:00+12:00,Round of 16,Bracket,W79,W80,Mexico City Stadium,Mexico City
+2026-07-07T07:00:00+12:00,Round of 16,Bracket,W83,W84,Dallas Stadium,Dallas
+2026-07-07T12:00:00+12:00,Round of 16,Bracket,W81,W82,Seattle Stadium,Seattle
+2026-07-08T04:00:00+12:00,Round of 16,Bracket,W86,W88,Atlanta Stadium,Atlanta
+2026-07-08T08:00:00+12:00,Round of 16,Bracket,W85,W87,BC Place Vancouver,Vancouver
+2026-07-10T08:00:00+12:00,Quarter-final,Bracket,W89,W90,Boston Stadium,Boston
+2026-07-11T07:00:00+12:00,Quarter-final,Bracket,W93,W94,Los Angeles Stadium,Los Angeles
+2026-07-12T09:00:00+12:00,Quarter-final,Bracket,W91,W92,Miami Stadium,Miami
+2026-07-12T13:00:00+12:00,Quarter-final,Bracket,W95,W96,Kansas City Stadium,Kansas City
+2026-07-15T07:00:00+12:00,Semi-final,Bracket,W97,W98,Dallas Stadium,Dallas
+2026-07-16T07:00:00+12:00,Semi-final,Bracket,W99,W100,Atlanta Stadium,Atlanta
+2026-07-19T09:00:00+12:00,Play-off for third place,Bracket,RU101,RU102,Miami Stadium,Miami
+2026-07-20T07:00:00+12:00,Final,Bracket,W101,W102,New York/New Jersey Stadium,New York

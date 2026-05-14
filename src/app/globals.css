@@ -137,6 +137,35 @@ footer {
     @apply inline-flex items-center border-[2px] border-current px-2 py-0.5 font-bold uppercase rounded-none;
   }
 
+  /* CGA accent tags. Used for group labels, stage badges, status pills —
+     anywhere we want a quick splash of cyan/magenta with reversed ink. */
+  .brutal-tag-cyan {
+    @apply inline-flex items-center border-[2px] border-cga-black bg-cga-cyan text-cga-black px-2 py-0.5 font-bold uppercase tracking-wide rounded-none;
+  }
+  .brutal-tag-magenta {
+    @apply inline-flex items-center border-[2px] border-cga-black bg-cga-magenta text-cga-black px-2 py-0.5 font-bold uppercase tracking-wide rounded-none;
+  }
+  .dark .brutal-tag-cyan,
+  .dark .brutal-tag-magenta {
+    @apply border-cga-black;
+  }
+
+  /* Reverse-out headings: black ink on a cyan or magenta block. */
+  .brutal-heading-cyan {
+    @apply inline-block border-[3px] border-cga-black bg-cga-cyan text-cga-black px-3 py-1 shadow-cga;
+  }
+  .brutal-heading-magenta {
+    @apply inline-block border-[3px] border-cga-black bg-cga-magenta text-cga-black px-3 py-1 shadow-cga;
+  }
+  .dark .brutal-heading-cyan,
+  .dark .brutal-heading-magenta {
+    @apply border-cga-black;
+  }
+
+  /* ANSI logo block-glyph accents — sprinkle through ▓▒░ marks. */
+  .ansi-cyan { color: #55ffff; }
+  .ansi-magenta { color: #ff55ff; }
+
   .brutal-error {
     @apply border-[3px] border-current bg-cga-magenta px-3 py-2 font-bold text-cga-black rounded-none;
   }

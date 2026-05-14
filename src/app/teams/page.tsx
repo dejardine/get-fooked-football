@@ -2,6 +2,7 @@ import { db, schema } from '@/db/client';
 import { asc } from 'drizzle-orm';
 import { getSession } from '@/lib/session';
 import { computeTeamScores } from '@/lib/scoring';
+import { tagClassForGroup } from '@/lib/group-color';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +55,7 @@ export default async function MyTeamsPage() {
   return (
     <div className="space-y-6">
       <div className="brutal-card">
-        <h1 className="brutal-h1">[ My Teams ]</h1>
+        <h1 className="brutal-h1 brutal-heading-magenta">[ My Teams ]</h1>
         {!drawDone && (
           <p className="mt-2">
             The draw hasn't happened yet. Set your three preferences on the{' '}
@@ -194,7 +195,9 @@ function TeamTable({
                 {isSeed && <span title="Top seed">★ </span>}
                 {t.flag} {t.name}
               </td>
-              <td>{t.groupName}</td>
+              <td>
+                <span className={`${tagClassForGroup(t.groupName)} text-[10px] leading-none`}>{t.groupName}</span>
+              </td>
               <td className="text-right tabular-nums">{t.fifaRank}</td>
               <td className="text-right tabular-nums">{(Number(t.polymarketPrice) * 100).toFixed(1)}%</td>
               <td className="text-right tabular-nums">{fmtNumber(t.population)}</td>

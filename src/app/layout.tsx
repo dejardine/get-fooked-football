@@ -51,7 +51,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="border-b-[3px] border-current">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
             <Link href="/" className="flex items-baseline gap-2">
-              <span className="text-xl md:text-2xl font-bold uppercase tracking-tight">▓▒░ GET FOOKED</span>
+              <span className="text-xl md:text-2xl font-bold uppercase tracking-tight">
+                <span className="ansi-magenta">▓</span>
+                <span className="ansi-cyan">▒</span>
+                <span className="ansi-magenta">░</span>{' '}
+                GET FOOKED
+              </span>
               <span className="text-xs font-bold opacity-100">⚽ '26</span>
             </Link>
             <nav className="hidden gap-1 md:flex">
@@ -96,8 +101,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </header>
         <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
         <footer className="mx-auto max-w-6xl px-4 py-8 text-xs">
-          <span className="brutal-pill">GET FOOKED</span>
-          <span className="ml-2 opacity-100">═══ WC2026 ═══ built for friends, not bookies</span>
+          <span className="brutal-tag-magenta">GET FOOKED</span>
+          <span className="ml-2 opacity-100">
+            <span className="ansi-cyan">═══</span> WC2026 <span className="ansi-cyan">═══</span> built for friends, not bookies
+          </span>
         </footer>
       </body>
     </html>

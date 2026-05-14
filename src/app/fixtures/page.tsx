@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { db, schema } from '@/db/client';
 import { asc } from 'drizzle-orm';
 import { fmtNzDay, fmtNzTime, nzZoneAbbr } from '@/lib/format';
+import { tagClassForGroup } from '@/lib/group-color';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,7 @@ export default async function FixturesPage() {
   return (
     <div className="space-y-6">
       <div className="brutal-card">
-        <h1 className="brutal-h1">Fixture Calendar</h1>
+        <h1 className="brutal-h1 brutal-heading-cyan">Fixture Calendar</h1>
         <p className="text-sm mt-2">All 104 matches of the 2026 World Cup. Times shown in NZ time.</p>
       </div>
 
@@ -45,7 +46,7 @@ export default async function FixturesPage() {
               const time = fmtNzTime(f.kickoff);
               const zone = nzZoneAbbr(f.kickoff);
               const stageLabel = STAGE_LABEL[f.stage] ?? f.stage;
-              const stageSuffix = f.groupName ? ` ${f.groupName}` : '';
+              const groupTagClass = f.groupName ? tagClassForGroup(f.groupName) : null;
               return (
                 <Link
                   key={f.id}
@@ -72,9 +73,15 @@ export default async function FixturesPage() {
                     <span className="tabular-nums font-bold">
                       {time} {zone}
                     </span>
-                    <span className="hidden sm:inline-block border-[2px] border-current px-1.5 py-0 uppercase font-bold">
-                      {stageLabel}{stageSuffix}
-                    </span>
+                    {f.groupName && groupTagClass ? (
+                      <span className={`hidden sm:inline-flex ${groupTagClass} text-[10px] leading-none`}>
+                        Group {f.groupName}
+                      </span>
+                    ) : (
+                      <span className="hidden sm:inline-block border-[2px] border-current px-1.5 py-0 uppercase font-bold">
+                        {stageLabel}
+                      </span>
+                    )}
                   </div>
                 </Link>
               );

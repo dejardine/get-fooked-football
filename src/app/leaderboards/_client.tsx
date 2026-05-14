@@ -45,7 +45,7 @@ export default function LeaderboardClient({ initialBoard, initialRows, initialMe
   return (
     <>
       <div className="brutal-card">
-        <h1 className="brutal-h1">Leaderboards</h1>
+        <h1 className="brutal-h1 brutal-heading-cyan">Leaderboards</h1>
         <p className="text-sm opacity-100 mt-2">Same points, different lenses. Pick a board.</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <label className="text-sm font-bold uppercase tracking-wide">Board</label>
