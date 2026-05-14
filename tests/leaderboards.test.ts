@@ -71,4 +71,25 @@ describe('computeLeaderboard', () => {
     const board = computeLeaderboard('overall', users, teams, assignments, extra);
     expect(board.every((r) => r.points === 8)).toBe(true);
   });
+
+  it('schadenfreude: awards +3 per cursed-team loss, independent of team assignments', () => {
+    // Robin curses team 6 (the filler that just lost 4 times). Sam curses
+    // team 1, which won — so no points.
+    const curses = [
+      { userId: 1, teamId: 6 },
+      { userId: 2, teamId: 1 },
+    ];
+    const board = computeLeaderboard('schadenfreude', users, teams, assignments, fixtures, curses);
+    const robin = board.find((r) => r.name === 'Robin')!;
+    const sam = board.find((r) => r.name === 'Sam')!;
+    expect(robin.points).toBe(12); // 4 cursed-team losses × 3
+    expect(sam.points).toBe(0);
+    expect(board[0].name).toBe('Robin');
+  });
+
+  it('schadenfreude with no curses returns all-zero rows, not a crash', () => {
+    const board = computeLeaderboard('schadenfreude', users, teams, assignments, fixtures);
+    expect(board.every((r) => r.points === 0)).toBe(true);
+    expect(board).toHaveLength(users.length);
+  });
 });

@@ -1,11 +1,12 @@
 import { db, schema } from '@/db/client';
-import { asc } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { getSession } from '@/lib/session';
 import { computeTeamScores } from '@/lib/scoring';
 import { tagClassForGroup } from '@/lib/group-color';
 import { avatarFor } from '@/lib/avatar';
 import { displayName } from '@/lib/display-name';
 import { Avatar } from '../_avatar';
+import { castCurseAction, liftCurseAction } from './_curse-actions';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -22,12 +23,22 @@ export default async function MyTeamsPage() {
     );
   }
 
-  const [teams, assignments, fixtures, users] = await Promise.all([
+  const [teams, assignments, fixtures, users, allCurses, myCursesRows] = await Promise.all([
     db.select().from(schema.teams).orderBy(asc(schema.teams.groupName)),
     db.select().from(schema.teamAssignments),
     db.select().from(schema.fixtures),
     db.select().from(schema.users).orderBy(asc(schema.users.name)),
+    db.select({ userId: schema.teamCurses.userId, teamId: schema.teamCurses.teamId }).from(schema.teamCurses),
+    db
+      .select()
+      .from(schema.teamCurses)
+      .where(eq(schema.teamCurses.userId, session.userId!)),
   ]);
+  // teamId -> curser count
+  const cursesByTeam = new Map<number, number>();
+  for (const c of allCurses) cursesByTeam.set(c.teamId, (cursesByTeam.get(c.teamId) ?? 0) + 1);
+  // teamId -> the current user's curse row (if any)
+  const myCurseByTeam = new Map(myCursesRows.map((c) => [c.teamId, c] as const));
   const teamById = new Map(teams.map((t) => [t.id, t] as const));
   const scores = computeTeamScores(fixtures, teams);
 
@@ -137,6 +148,60 @@ export default async function MyTeamsPage() {
           </div>
         </div>
       )}
+
+      <div id="curses" className="brutal-card">
+        <h2 className="brutal-h2">Curses</h2>
+        <p className="text-sm mt-2 opacity-100">
+          Cast a curse on any team. Every fixture where a cursed team <strong>loses</strong> earns you +3 on the{' '}
+          <Link className="brutal-link" href="/leaderboards?board=schadenfreude">Schadenfreude board</Link>. Doesn&rsquo;t
+          affect the main league. Self-curses welcome.
+        </p>
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          {teams.map((t) => {
+            const mine = myCurseByTeam.get(t.id);
+            const cursers = cursesByTeam.get(t.id) ?? 0;
+            return (
+              <div key={t.id} className="border-[3px] border-current p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-bold">
+                    {t.flag} {t.name}{' '}
+                    <span className="text-xs opacity-100">Grp {t.groupName}</span>
+                  </div>
+                  {cursers > 0 && (
+                    <span className="brutal-tag-magenta text-[10px] leading-none">
+                      cursed by {cursers}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <form action={castCurseAction} className="flex flex-wrap items-center gap-2 flex-1">
+                    <input type="hidden" name="team_id" value={t.id} />
+                    <input
+                      type="text"
+                      name="curse_text"
+                      defaultValue={mine?.curseText ?? ''}
+                      maxLength={140}
+                      placeholder={mine ? 'Update your curse text…' : 'optional curse text'}
+                      className="brutal-input flex-1 min-w-[12rem] text-sm"
+                    />
+                    <button type="submit" className={mine ? 'brutal-btn-ghost text-xs' : 'brutal-btn-pink text-xs'}>
+                      {mine ? 'Update curse' : 'Cast curse'}
+                    </button>
+                  </form>
+                  {mine && (
+                    <form action={liftCurseAction}>
+                      <input type="hidden" name="team_id" value={t.id} />
+                      <button type="submit" className="brutal-btn-ghost text-xs">
+                        Lift
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

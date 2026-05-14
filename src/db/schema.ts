@@ -225,6 +225,21 @@ export const commentReactions = pgTable(
   }),
 );
 
+export const teamCurses = pgTable(
+  'team_curses',
+  {
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    teamId: integer('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+    /** Optional flavour text — "your defense will leak like a sieve". */
+    curseText: text('curse_text'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.teamId] }),
+    teamIdx: index('team_curses_team_idx').on(t.teamId),
+  }),
+);
+
 export const burns = pgTable(
   'burns',
   {
@@ -270,5 +285,6 @@ export type ScoreEdit = typeof scoreEdits.$inferSelect;
 export type MatchComment = typeof matchComments.$inferSelect;
 export type ProfileJab = typeof profileJabs.$inferSelect;
 export type Burn = typeof burns.$inferSelect;
+export type TeamCurse = typeof teamCurses.$inferSelect;
 export type CommentReaction = typeof commentReactions.$inferSelect;
 export type TeamPreference = typeof teamPreferences.$inferSelect;

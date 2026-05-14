@@ -2,6 +2,7 @@ import { db, schema } from '@/db/client';
 import { computeTeamScores } from './scoring';
 import { avatarFor } from './avatar';
 import { displayName } from './display-name';
+import { computeSchadenfreude, type CurseInput } from './schadenfreude';
 import type { Fixture, Team, User } from '@/db/schema';
 
 export { BOARD_META } from './leaderboards-types';
@@ -19,7 +20,27 @@ export function computeLeaderboard(
   teams: Pick<Team, 'id' | 'population' | 'sheep' | 'fifaRank'>[],
   assignments: AssignmentInput[],
   fixtures: Fixture[],
+  curses: ReadonlyArray<CurseInput> = [],
 ): BoardRow[] {
+  // Schadenfreude is a parallel scoring path that doesn't share the
+  // team-assignment + per-team-points pipeline. Handle it up front.
+  if (kind === 'schadenfreude') {
+    const points = computeSchadenfreude(fixtures, curses);
+    const rows = users.map<BoardRow>((u) => ({
+      userId: u.id,
+      name: displayName({ name: u.name, nickname: u.nickname }),
+      avatarSrc: avatarFor({ email: u.email, avatarUrl: u.avatarUrl ?? null }, 48),
+      teamCount: 0,
+      points: points.get(u.id) ?? 0,
+      weight: 0,
+      weightedPoints: points.get(u.id) ?? 0,
+    }));
+    rows.sort(
+      (a, b) => b.weightedPoints - a.weightedPoints || a.name.localeCompare(b.name),
+    );
+    return rows;
+  }
+
   const filteredFixtures =
     kind === 'group_only'
       ? fixtures.filter((f) => f.stage === 'GROUP')
@@ -72,11 +93,12 @@ export function computeLeaderboard(
 }
 
 export async function buildLeaderboard(kind: BoardKey): Promise<BoardRow[]> {
-  const [users, teams, assignments, fixtures] = await Promise.all([
+  const [users, teams, assignments, fixtures, curses] = await Promise.all([
     db.select().from(schema.users),
     db.select().from(schema.teams),
     db.select().from(schema.teamAssignments),
     db.select().from(schema.fixtures),
+    db.select({ userId: schema.teamCurses.userId, teamId: schema.teamCurses.teamId }).from(schema.teamCurses),
   ]);
-  return computeLeaderboard(kind, users, teams, assignments, fixtures);
+  return computeLeaderboard(kind, users, teams, assignments, fixtures, curses);
 }

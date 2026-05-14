@@ -2,7 +2,14 @@
 // components (e.g. the dropdown / AJAX table) can import without dragging the
 // `pg` driver into the browser bundle.
 
-export type BoardKey = 'overall' | 'population' | 'sheep' | 'fifa_underdog' | 'group_only' | 'ko_only';
+export type BoardKey =
+  | 'overall'
+  | 'population'
+  | 'sheep'
+  | 'fifa_underdog'
+  | 'group_only'
+  | 'ko_only'
+  | 'schadenfreude';
 
 export type BoardRow = {
   userId: number;
@@ -35,4 +42,9 @@ export const BOARD_META: Record<BoardKey, { label: string; tagline: string; unit
   },
   group_only: { label: 'Group Stage Only', tagline: 'Points from group-stage matches only.', unit: 'pts' },
   ko_only: { label: 'Knockout Only', tagline: 'Points from R32 onwards.', unit: 'pts' },
+  schadenfreude: {
+    label: 'Schadenfreude',
+    tagline: '+3 every time a team you cursed loses. Side-board only — does not affect the main league.',
+    unit: 'sf',
+  },
 };

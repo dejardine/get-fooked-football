@@ -21,7 +21,7 @@ const STAGE_ADVANCE: Record<string, number> = {
 
 export type MatchPoints = { homeTeamId?: number; awayTeamId?: number; home: number; away: number };
 
-function winnerSide(f: Fixture): 'home' | 'away' | 'draw' {
+export function winnerSide(f: Fixture): 'home' | 'away' | 'draw' {
   if (f.status !== 'FINISHED') return 'draw';
   const hs = f.homeScore ?? 0;
   const as = f.awayScore ?? 0;
