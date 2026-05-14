@@ -14,6 +14,7 @@ import { avatarFor } from '@/lib/avatar';
 import { displayName } from '@/lib/display-name';
 import { BurnsBanner } from './_burns-banner';
 import { Konami } from './_konami';
+import { KonamiTrigger } from './_konami-trigger';
 
 export const metadata: Metadata = {
   title: 'Get Fooked — 2026 World Cup tipping',
@@ -97,15 +98,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen">
         <header className="border-b-[3px] border-current">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-            <Link href="/" className="flex items-baseline gap-2">
-              <span className="text-xl md:text-2xl font-bold uppercase tracking-tight">
-                <span className="ansi-magenta">▓</span>
-                <span className="ansi-cyan">▒</span>
-                <span className="ansi-magenta">░</span>{' '}
-                GET FOOKED
-              </span>
-              <span className="text-xs font-bold opacity-100">⚽ '26</span>
-            </Link>
+            <div className="flex items-baseline gap-2">
+              <Link href="/" className="flex items-baseline">
+                <span className="text-xl md:text-2xl font-bold uppercase tracking-tight">
+                  <span className="ansi-magenta">▓</span>
+                  <span className="ansi-cyan">▒</span>
+                  <span className="ansi-magenta">░</span>{' '}
+                  GET FOOKED
+                </span>
+              </Link>
+              {/* Triple-click this badge to flap. Mobile-friendly easter-egg trigger. */}
+              <KonamiTrigger />
+            </div>
             <nav className="hidden gap-1 md:flex">
               {NAV.map(([label, href]) => (
                 <Link

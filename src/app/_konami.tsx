@@ -18,12 +18,20 @@ const SEQUENCE = [
   'a',
 ] as const;
 
+/** Public name of the event sibling components dispatch to force the modal
+ *  open. Used by _konami-trigger.tsx and the URL-param shortcut below. */
+export const KONAMI_OPEN_EVENT = 'konami:open';
+
 /**
  * Global keydown listener for the Konami code. When the sequence matches,
  * opens a portaled fullscreen modal with the Flappy Bird easter egg.
  *
  * Listener bails out when the user is typing into a form input so the chat
- * composer doesn't fight the cheat detection.
+ * composer doesn't fight the cheat detection. Also responds to:
+ *  - The custom `konami:open` event (dispatched by the triple-click trigger
+ *    on the header ⚽ '26 badge — a no-arrow-keys alternative).
+ *  - The URL search param `?konami=1` (deep link / mobile fallback).
+ *  - The global function `window.__openFlappy()` for devtools poking.
  */
 export function Konami() {
   const buffer = useRef<string[]>([]);
@@ -51,6 +59,8 @@ export function Konami() {
           }
         }
         if (match) {
+          // eslint-disable-next-line no-console
+          console.log('[konami] sequence matched — opening flappy');
           buffer.current = [];
           setOpen(true);
         }
@@ -58,6 +68,36 @@ export function Konami() {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Custom-event trigger (used by the header badge triple-click).
+  useEffect(() => {
+    const onOpen = () => {
+      // eslint-disable-next-line no-console
+      console.log('[konami] open event received');
+      setOpen(true);
+    };
+    window.addEventListener(KONAMI_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(KONAMI_OPEN_EVENT, onOpen);
+  }, []);
+
+  // URL-param trigger + devtools backdoor on mount.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('konami') === '1') setOpen(true);
+    } catch {
+      /* ignore */
+    }
+    (window as unknown as { __openFlappy?: () => void }).__openFlappy = () => setOpen(true);
+    return () => {
+      try {
+        delete (window as unknown as { __openFlappy?: () => void }).__openFlappy;
+      } catch {
+        /* ignore */
+      }
+    };
   }, []);
 
   // Lock body scroll while open.
