@@ -1,9 +1,99 @@
 {
-  "id": "609d306f-7db2-410d-a765-084a21524845",
+  "id": "69d30977-2384-4ba4-a839-8126e689bfce",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.comment_reactions": {
+      "name": "comment_reactions",
+      "schema": "",
+      "columns": {
+        "comment_id": {
+          "name": "comment_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "emoji": {
+          "name": "emoji",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "comment_reactions_comment_idx": {
+          "name": "comment_reactions_comment_idx",
+          "columns": [
+            {
+              "expression": "comment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "comment_reactions_comment_id_match_comments_id_fk": {
+          "name": "comment_reactions_comment_id_match_comments_id_fk",
+          "tableFrom": "comment_reactions",
+          "tableTo": "match_comments",
+          "columnsFrom": [
+            "comment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "comment_reactions_user_id_users_id_fk": {
+          "name": "comment_reactions_user_id_users_id_fk",
+          "tableFrom": "comment_reactions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "comment_reactions_comment_id_user_id_emoji_pk": {
+          "name": "comment_reactions_comment_id_user_id_emoji_pk",
+          "columns": [
+            "comment_id",
+            "user_id",
+            "emoji"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.fixtures": {
       "name": "fixtures",
       "schema": "",
@@ -365,8 +455,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.match_stickers": {
-      "name": "match_stickers",
+    "public.match_comments": {
+      "name": "match_comments",
       "schema": "",
       "columns": {
         "id": {
@@ -387,37 +477,23 @@
           "primaryKey": false,
           "notNull": true
         },
-        "kind": {
-          "name": "kind",
+        "body": {
+          "name": "body",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "content": {
-          "name": "content",
+        "image_path": {
+          "name": "image_path",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "file_path": {
-          "name": "file_path",
-          "type": "text",
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
-        },
-        "pos_x": {
-          "name": "pos_x",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 50
-        },
-        "pos_y": {
-          "name": "pos_y",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 50
         },
         "created_at": {
           "name": "created_at",
@@ -428,11 +504,17 @@
         }
       },
       "indexes": {
-        "match_stickers_fixture_idx": {
-          "name": "match_stickers_fixture_idx",
+        "match_comments_fixture_idx": {
+          "name": "match_comments_fixture_idx",
           "columns": [
             {
               "expression": "fixture_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -445,9 +527,9 @@
         }
       },
       "foreignKeys": {
-        "match_stickers_fixture_id_fixtures_id_fk": {
-          "name": "match_stickers_fixture_id_fixtures_id_fk",
-          "tableFrom": "match_stickers",
+        "match_comments_fixture_id_fixtures_id_fk": {
+          "name": "match_comments_fixture_id_fixtures_id_fk",
+          "tableFrom": "match_comments",
           "tableTo": "fixtures",
           "columnsFrom": [
             "fixture_id"
@@ -458,9 +540,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "match_stickers_user_id_users_id_fk": {
-          "name": "match_stickers_user_id_users_id_fk",
-          "tableFrom": "match_stickers",
+        "match_comments_user_id_users_id_fk": {
+          "name": "match_comments_user_id_users_id_fk",
+          "tableFrom": "match_comments",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"

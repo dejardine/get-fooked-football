@@ -1,3 +1,11 @@
+CREATE TABLE IF NOT EXISTS "comment_reactions" (
+	"comment_id" integer NOT NULL,
+	"user_id" integer NOT NULL,
+	"emoji" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "comment_reactions_comment_id_user_id_emoji_pk" PRIMARY KEY("comment_id","user_id","emoji")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "fixtures" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"kickoff" timestamp with time zone NOT NULL,
@@ -37,15 +45,13 @@ CREATE TABLE IF NOT EXISTS "invites" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "match_stickers" (
+CREATE TABLE IF NOT EXISTS "match_comments" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"fixture_id" integer NOT NULL,
 	"user_id" integer NOT NULL,
-	"kind" text NOT NULL,
-	"content" text,
-	"file_path" text,
-	"pos_x" integer DEFAULT 50 NOT NULL,
-	"pos_y" integer DEFAULT 50 NOT NULL,
+	"body" text NOT NULL,
+	"image_path" text,
+	"deleted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -132,6 +138,18 @@ CREATE TABLE IF NOT EXISTS "users" (
 );
 --> statement-breakpoint
 DO $$ BEGIN
+ ALTER TABLE "comment_reactions" ADD CONSTRAINT "comment_reactions_comment_id_match_comments_id_fk" FOREIGN KEY ("comment_id") REFERENCES "public"."match_comments"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "comment_reactions" ADD CONSTRAINT "comment_reactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  ALTER TABLE "fixtures" ADD CONSTRAINT "fixtures_home_team_id_teams_id_fk" FOREIGN KEY ("home_team_id") REFERENCES "public"."teams"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -174,13 +192,13 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "match_stickers" ADD CONSTRAINT "match_stickers_fixture_id_fixtures_id_fk" FOREIGN KEY ("fixture_id") REFERENCES "public"."fixtures"("id") ON DELETE cascade ON UPDATE no action;
+ ALTER TABLE "match_comments" ADD CONSTRAINT "match_comments_fixture_id_fixtures_id_fk" FOREIGN KEY ("fixture_id") REFERENCES "public"."fixtures"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "match_stickers" ADD CONSTRAINT "match_stickers_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ ALTER TABLE "match_comments" ADD CONSTRAINT "match_comments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -245,9 +263,10 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "comment_reactions_comment_idx" ON "comment_reactions" USING btree ("comment_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "fixtures_kickoff_idx" ON "fixtures" USING btree ("kickoff");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "hot_or_not_user_match_idx" ON "hot_or_not_votes" USING btree ("user_id","winner_photo_id","loser_photo_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "match_stickers_fixture_idx" ON "match_stickers" USING btree ("fixture_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "match_comments_fixture_idx" ON "match_comments" USING btree ("fixture_id","created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "photos_user_idx" ON "photos" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "score_edits_fixture_idx" ON "score_edits" USING btree ("fixture_id","created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "team_assignments_user_idx" ON "team_assignments" USING btree ("user_id");--> statement-breakpoint

@@ -12,3 +12,5 @@ tsconfig.tsbuildinfo
 .claude/
 *.swp
 *.swo
+fixtures.csv
+rankings.csv
