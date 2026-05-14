@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { avatarFor } from '@/lib/avatar';
 import { displayName } from '@/lib/display-name';
+import { BurnsBanner } from './_burns-banner';
 
 export const metadata: Metadata = {
   title: 'Get Fooked — 2026 World Cup tipping',
@@ -152,7 +153,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             ))}
           </nav>
         </header>
-        <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 py-6">
+          {session?.userId && meRow?.onboardedAt && (
+            <BurnsBanner viewerUserId={session.userId} viewerIsAdmin={!!session.isAdmin} />
+          )}
+          {children}
+        </main>
         <footer className="mx-auto max-w-6xl px-4 py-8 text-xs">
           <span className="brutal-tag-magenta">GET FOOKED</span>
           <span className="ml-2 opacity-100">

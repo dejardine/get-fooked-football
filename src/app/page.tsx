@@ -6,6 +6,8 @@ import { buildLeaderboard } from '@/lib/leaderboards';
 import { fmtNzDateTime, nzZoneAbbr } from '@/lib/format';
 import { tagClassForGroup } from '@/lib/group-color';
 import { getCommentCounts } from '@/lib/match-chat-counts';
+import { MAX_BURN_LEN } from '@/lib/burns';
+import { postBurnAction } from './_burn-actions';
 import PolymarketWidget from './_polymarket-widget';
 import LeaderboardWidget from './_leaderboard-widget';
 import { ChatBadge } from './_chat-badge';
@@ -57,6 +59,26 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {session.userId && (
+        <section className="brutal-card">
+          <h2 className="brutal-h2">Drop a burn</h2>
+          <p className="text-sm mt-1 opacity-100">
+            Posts as a sitewide banner for 24h. No rate limit — chaos rules.
+          </p>
+          <form action={postBurnAction} className="mt-3 flex flex-wrap items-stretch gap-2">
+            <input
+              type="text"
+              name="body"
+              required
+              maxLength={MAX_BURN_LEN}
+              placeholder="Tell the whole crew, all at once."
+              className="brutal-input flex-1 min-w-[16rem]"
+            />
+            <button type="submit" className="brutal-btn-pink">Burn it</button>
+          </form>
+        </section>
+      )}
 
       {/* Next fixtures — full width. Two columns on wider screens so the list
           doesn't span a kilometre across the card. */}

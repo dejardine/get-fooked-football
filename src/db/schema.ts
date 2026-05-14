@@ -225,6 +225,24 @@ export const commentReactions = pgTable(
   }),
 );
 
+export const burns = pgTable(
+  'burns',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    /** Auto-expires 24h after createdAt. Set in the server action so the
+     *  default is consistent regardless of DB timezone funkiness. */
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    /** Author or admin can dismiss early. */
+    dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    activeIdx: index('burns_active_idx').on(t.expiresAt),
+  }),
+);
+
 export const profileJabs = pgTable(
   'profile_jabs',
   {
@@ -251,5 +269,6 @@ export type Photo = typeof photos.$inferSelect;
 export type ScoreEdit = typeof scoreEdits.$inferSelect;
 export type MatchComment = typeof matchComments.$inferSelect;
 export type ProfileJab = typeof profileJabs.$inferSelect;
+export type Burn = typeof burns.$inferSelect;
 export type CommentReaction = typeof commentReactions.$inferSelect;
 export type TeamPreference = typeof teamPreferences.$inferSelect;
