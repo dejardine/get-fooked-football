@@ -189,23 +189,36 @@ export const scoreEdits = pgTable(
   }),
 );
 
-export const matchStickers = pgTable(
-  'match_stickers',
+export const matchComments = pgTable(
+  'match_comments',
   {
     id: serial('id').primaryKey(),
     fixtureId: integer('fixture_id').notNull().references(() => fixtures.id, { onDelete: 'cascade' }),
     userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    // 'emoji' = `content` holds a single grapheme; 'image' = `filePath` is a /uploads/... path
-    kind: text('kind').notNull(),
-    content: text('content'),
-    filePath: text('file_path'),
-    // freeform x,y position 0..1 for placement on the match canvas
-    posX: integer('pos_x').notNull().default(50),
-    posY: integer('pos_y').notNull().default(50),
+    body: text('body').notNull(),
+    /** /uploads/<file> path, if the user attached or pasted an image. */
+    imagePath: text('image_path'),
+    /** Soft-delete from an admin (or self). Hidden but row preserved for audit. */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    fixtureIdx: index('match_stickers_fixture_idx').on(t.fixtureId),
+    fixtureIdx: index('match_comments_fixture_idx').on(t.fixtureId, t.createdAt),
+  }),
+);
+
+export const commentReactions = pgTable(
+  'comment_reactions',
+  {
+    commentId: integer('comment_id').notNull().references(() => matchComments.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    /** Single emoji grapheme. */
+    emoji: text('emoji').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.commentId, t.userId, t.emoji] }),
+    commentIdx: index('comment_reactions_comment_idx').on(t.commentId),
   }),
 );
 
@@ -215,5 +228,6 @@ export type Fixture = typeof fixtures.$inferSelect;
 export type Prize = typeof prizes.$inferSelect;
 export type Photo = typeof photos.$inferSelect;
 export type ScoreEdit = typeof scoreEdits.$inferSelect;
-export type MatchSticker = typeof matchStickers.$inferSelect;
+export type MatchComment = typeof matchComments.$inferSelect;
+export type CommentReaction = typeof commentReactions.$inferSelect;
 export type TeamPreference = typeof teamPreferences.$inferSelect;

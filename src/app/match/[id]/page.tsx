@@ -1,13 +1,23 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { db, schema } from '@/db/client';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { getSession } from '@/lib/session';
 import { submitScoreEdit, getEditHistory } from '@/lib/score-edits';
 import { saveUploadedImage } from '@/lib/uploads';
 import { pointsForFixture } from '@/lib/scoring';
 import { fmtNzDateTime, nzZoneAbbr } from '@/lib/format';
+import { avatarFor } from '@/lib/avatar';
+import {
+  aggregateReactions,
+  clampEmoji,
+  parseMentions,
+  validateCommentBody,
+  MAX_COMMENT_LEN,
+} from '@/lib/match-chat';
 import PasteImageField from './_paste-image';
+import { Avatar } from '../../_avatar';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,64 +66,89 @@ async function updateScore(formData: FormData) {
   redirect(`/match/${id}`);
 }
 
-async function addEmojiSticker(formData: FormData) {
+async function postComment(formData: FormData) {
   'use server';
   const s = await getSession();
   if (!s.userId) redirect('/login');
-  const id = Number(formData.get('fixture_id'));
-  const content = String(formData.get('emoji') ?? '').trim();
-  if (!content) redirect(`/match/${id}`);
-  // Trim to one grapheme so people can't dump essays into stickers.
-  const grapheme = Array.from(new Intl.Segmenter().segment(content))[0]?.segment ?? content.slice(0, 4);
-  await db.insert(schema.matchStickers).values({
-    fixtureId: id,
-    userId: s.userId,
-    kind: 'emoji',
-    content: grapheme,
-    posX: Math.floor(Math.random() * 80) + 10,
-    posY: Math.floor(Math.random() * 70) + 10,
-  });
-  redirect(`/match/${id}`);
-}
-
-async function addImageSticker(formData: FormData) {
-  'use server';
-  const s = await getSession();
-  if (!s.userId) redirect('/login');
-  const id = Number(formData.get('fixture_id'));
-  const file = formData.get('image') as File | null;
-  if (!file || !file.size) redirect(`/match/${id}`);
-  try {
-    const filePath = await saveUploadedImage(file);
-    await db.insert(schema.matchStickers).values({
-      fixtureId: id,
-      userId: s.userId,
-      kind: 'image',
-      filePath,
-      posX: Math.floor(Math.random() * 70) + 15,
-      posY: Math.floor(Math.random() * 60) + 20,
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'failed';
-    redirect(`/match/${id}?err=${encodeURIComponent(msg)}`);
-  }
-  redirect(`/match/${id}`);
-}
-
-async function removeSticker(formData: FormData) {
-  'use server';
-  const s = await getSession();
-  if (!s.userId) redirect('/login');
-  const stickerId = Number(formData.get('sticker_id'));
   const fixtureId = Number(formData.get('fixture_id'));
-  const row = await db.select().from(schema.matchStickers).where(eq(schema.matchStickers.id, stickerId)).limit(1);
-  if (!row[0]) redirect(`/match/${fixtureId}`);
-  if (row[0].userId !== s.userId && !s.isAdmin) redirect(`/match/${fixtureId}`);
-  await db.delete(schema.matchStickers).where(eq(schema.matchStickers.id, stickerId));
-  redirect(`/match/${fixtureId}`);
+  const file = formData.get('image');
+
+  let imagePath: string | null = null;
+  if (file instanceof File && file.size > 0) {
+    try {
+      imagePath = await saveUploadedImage(file);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'upload-failed';
+      redirect(`/match/${fixtureId}?err=${encodeURIComponent(msg)}#chat`);
+    }
+  }
+
+  const result = validateCommentBody(formData.get('body'), imagePath !== null);
+  if (!result.ok) redirect(`/match/${fixtureId}?err=${result.reason}#chat`);
+
+  await db.insert(schema.matchComments).values({
+    fixtureId,
+    userId: s.userId!,
+    body: result.body,
+    imagePath,
+  });
+  redirect(`/match/${fixtureId}#chat`);
 }
 
-const QUICK_EMOJI = ['🔥', '😂', '⚽', '🚀', '💀', '🤡', '🐑', '👑', '🥶', '🤯', '🇳🇿', '🇦🇷'];
+async function toggleReaction(formData: FormData) {
+  'use server';
+  const s = await getSession();
+  if (!s.userId) redirect('/login');
+  const commentId = Number(formData.get('comment_id'));
+  const fixtureId = Number(formData.get('fixture_id'));
+  const emoji = clampEmoji(String(formData.get('emoji') ?? ''));
+  if (!emoji) redirect(`/match/${fixtureId}#chat`);
+
+  // Toggle: if this (user, comment, emoji) reaction exists, remove it; else add.
+  const existing = await db
+    .select()
+    .from(schema.commentReactions)
+    .where(
+      and(
+        eq(schema.commentReactions.commentId, commentId),
+        eq(schema.commentReactions.userId, s.userId!),
+        eq(schema.commentReactions.emoji, emoji),
+      ),
+    )
+    .limit(1);
+  if (existing.length > 0) {
+    await db
+      .delete(schema.commentReactions)
+      .where(
+        and(
+          eq(schema.commentReactions.commentId, commentId),
+          eq(schema.commentReactions.userId, s.userId!),
+          eq(schema.commentReactions.emoji, emoji),
+        ),
+      );
+  } else {
+    await db.insert(schema.commentReactions).values({ commentId, userId: s.userId!, emoji });
+  }
+  redirect(`/match/${fixtureId}#chat`);
+}
+
+async function deleteComment(formData: FormData) {
+  'use server';
+  const s = await getSession();
+  if (!s.userId) redirect('/login');
+  const commentId = Number(formData.get('comment_id'));
+  const fixtureId = Number(formData.get('fixture_id'));
+  const [row] = await db.select().from(schema.matchComments).where(eq(schema.matchComments.id, commentId)).limit(1);
+  if (!row) redirect(`/match/${fixtureId}#chat`);
+  if (row.userId !== s.userId && !s.isAdmin) redirect(`/match/${fixtureId}#chat`);
+  await db
+    .update(schema.matchComments)
+    .set({ deletedAt: new Date() })
+    .where(eq(schema.matchComments.id, commentId));
+  redirect(`/match/${fixtureId}#chat`);
+}
+
+const QUICK_REACTS = ['🔥', '😂', '⚽', '😭', '👏', '💀', '🤡', '🐑', '👑', '🇳🇿', '🇦🇷', '💯'];
 
 export default async function MatchPage({
   params,
@@ -135,21 +170,50 @@ export default async function MatchPage({
   const home = fixture.homeTeamId ? teamById.get(fixture.homeTeamId) : undefined;
   const away = fixture.awayTeamId ? teamById.get(fixture.awayTeamId) : undefined;
 
-  const stickers = await db
+  // Comments + their authors. Soft-deleted comments are filtered out at the
+  // query level — we never want to render the body of a removed message.
+  const comments = await db
     .select({
-      id: schema.matchStickers.id,
-      kind: schema.matchStickers.kind,
-      content: schema.matchStickers.content,
-      filePath: schema.matchStickers.filePath,
-      posX: schema.matchStickers.posX,
-      posY: schema.matchStickers.posY,
-      userId: schema.matchStickers.userId,
+      id: schema.matchComments.id,
+      body: schema.matchComments.body,
+      imagePath: schema.matchComments.imagePath,
+      createdAt: schema.matchComments.createdAt,
+      userId: schema.matchComments.userId,
       userName: schema.users.name,
+      userEmail: schema.users.email,
+      userAvatar: schema.users.avatarUrl,
     })
-    .from(schema.matchStickers)
-    .leftJoin(schema.users, eq(schema.users.id, schema.matchStickers.userId))
-    .where(eq(schema.matchStickers.fixtureId, id))
-    .orderBy(asc(schema.matchStickers.id));
+    .from(schema.matchComments)
+    .leftJoin(schema.users, eq(schema.users.id, schema.matchComments.userId))
+    .where(and(eq(schema.matchComments.fixtureId, id), isNull(schema.matchComments.deletedAt)))
+    .orderBy(asc(schema.matchComments.createdAt));
+
+  // All reactions for the visible comments, joined to user names for the
+  // hover-list. One query keeps it O(1) round-trips.
+  const reactionRows =
+    comments.length > 0
+      ? await db
+          .select({
+            commentId: schema.commentReactions.commentId,
+            emoji: schema.commentReactions.emoji,
+            userId: schema.commentReactions.userId,
+            userName: schema.users.name,
+          })
+          .from(schema.commentReactions)
+          .leftJoin(schema.users, eq(schema.users.id, schema.commentReactions.userId))
+          .where(inArray(schema.commentReactions.commentId, comments.map((c) => c.id)))
+          .orderBy(asc(schema.commentReactions.createdAt))
+      : [];
+
+  const reactionsByComment = new Map<number, Array<{ emoji: string; userId: number; userName: string }>>();
+  for (const r of reactionRows) {
+    const arr = reactionsByComment.get(r.commentId) ?? [];
+    arr.push({ emoji: r.emoji, userId: r.userId, userName: r.userName ?? '?' });
+    reactionsByComment.set(r.commentId, arr);
+  }
+
+  // For @-mention parsing — every user in the system is fair game.
+  const allUsers = await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users);
 
   const history = await getEditHistory(id);
   const points = pointsForFixture(fixture);
@@ -194,49 +258,139 @@ export default async function MatchPage({
         )}
       </div>
 
-      <div className="brutal-card">
-        <h2 className="brutal-h2">Sticker board</h2>
-        <p className="text-sm opacity-100">
-          Slap reactions on this match. <strong>iPhone tip:</strong> long-press a sticker in Messages or Photos →
-          “Copy”, then paste it here.
+      {/* Chat -------------------------------------------------------------- */}
+      <div id="chat" className="brutal-card">
+        <h2 className="brutal-h2">Match chat</h2>
+        <p className="text-sm opacity-100 mt-1">
+          Trash-talk in real time. Drop an image or paste a sticker. Type <code className="brutal-pill text-xs">@Name</code> to mention someone.
         </p>
 
-        <StickerCanvas stickers={stickers} fixtureId={id} currentUserId={session.userId} isAdmin={!!session.isAdmin} />
+        {err && <p className="brutal-error mt-3">{decodeURIComponent(err)}</p>}
+
+        <ul className="mt-4 space-y-3">
+          {comments.length === 0 && (
+            <li className="opacity-100 text-sm">No comments yet — be the first.</li>
+          )}
+          {comments.map((c) => {
+            const aggs = aggregateReactions(reactionsByComment.get(c.id) ?? [], session.userId ?? null);
+            const spans = parseMentions(c.body, allUsers);
+            const canDelete = session.userId != null && (c.userId === session.userId || session.isAdmin);
+            return (
+              <li key={c.id} className="border-[3px] border-current p-3">
+                <div className="flex items-start gap-3">
+                  <Avatar
+                    src={avatarFor({ email: c.userEmail ?? '', avatarUrl: c.userAvatar ?? null }, 48)}
+                    name={c.userName ?? 'someone'}
+                    size={28}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline flex-wrap gap-2">
+                      <span className="font-bold">{c.userName ?? 'someone'}</span>
+                      <span className="text-xs opacity-100">{fmtNzDateTime(c.createdAt)}</span>
+                    </div>
+                    {c.body && (
+                      <div className="mt-1 whitespace-pre-wrap break-words text-sm">
+                        {spans.map((s, i) =>
+                          s.type === 'mention' ? (
+                            <span key={i} className="brutal-tag-magenta text-xs mx-0.5 align-baseline">@{s.value}</span>
+                          ) : (
+                            <span key={i}>{s.value}</span>
+                          ),
+                        )}
+                      </div>
+                    )}
+                    {c.imagePath && (
+                      <a href={c.imagePath} target="_blank" rel="noreferrer" className="mt-2 inline-block">
+                        <img
+                          src={c.imagePath}
+                          alt="attached image"
+                          className="max-h-64 max-w-full border-[3px] border-current"
+                        />
+                      </a>
+                    )}
+
+                    {aggs.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {aggs.map((a) => (
+                          <form key={a.emoji} action={toggleReaction}>
+                            <input type="hidden" name="comment_id" value={c.id} />
+                            <input type="hidden" name="fixture_id" value={id} />
+                            <input type="hidden" name="emoji" value={a.emoji} />
+                            <button
+                              type="submit"
+                              title={a.names.join(', ')}
+                              className={`brutal-pill text-xs cursor-pointer ${a.mine ? 'bg-cga-cyan text-cga-black' : ''}`}
+                            >
+                              <span className="mr-1">{a.emoji}</span>
+                              <span className="tabular-nums">{a.count}</span>
+                            </button>
+                          </form>
+                        ))}
+                      </div>
+                    )}
+
+                    {session.userId && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-xs uppercase font-bold opacity-100 select-none">+ react</summary>
+                        <div className="mt-2 flex flex-wrap items-center gap-1">
+                          {QUICK_REACTS.map((e) => (
+                            <form key={e} action={toggleReaction}>
+                              <input type="hidden" name="comment_id" value={c.id} />
+                              <input type="hidden" name="fixture_id" value={id} />
+                              <input type="hidden" name="emoji" value={e} />
+                              <button type="submit" className="brutal-emoji-btn h-8 w-8 text-base">{e}</button>
+                            </form>
+                          ))}
+                          <form action={toggleReaction} className="flex items-center gap-1 ml-2">
+                            <input type="hidden" name="comment_id" value={c.id} />
+                            <input type="hidden" name="fixture_id" value={id} />
+                            <input
+                              className="brutal-input w-20 text-center text-base"
+                              name="emoji"
+                              placeholder="🙂"
+                              maxLength={4}
+                              required
+                            />
+                            <button type="submit" className="brutal-btn-ghost text-xs">add</button>
+                          </form>
+                        </div>
+                      </details>
+                    )}
+                  </div>
+
+                  {canDelete && (
+                    <form action={deleteComment}>
+                      <input type="hidden" name="comment_id" value={c.id} />
+                      <input type="hidden" name="fixture_id" value={id} />
+                      <button type="submit" className="brutal-btn-ghost text-xs" title="Delete">✕</button>
+                    </form>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
 
         {session.userId ? (
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <form action={addEmojiSticker} className="brutal-card-inner">
-              <input type="hidden" name="fixture_id" value={id} />
-              <div className="text-xs font-bold uppercase">Quick reactions</div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {QUICK_EMOJI.map((e) => (
-                  <button key={e} name="emoji" value={e} type="submit" className="brutal-emoji-btn">
-                    {e}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 flex gap-2">
-                <input className="brutal-input flex-1" name="emoji" placeholder="…or your own emoji" maxLength={4} />
-                <button className="brutal-btn-primary" type="submit">Add</button>
-              </div>
-            </form>
-
-            <form action={addImageSticker} encType="multipart/form-data" className="brutal-card-inner">
-              <input type="hidden" name="fixture_id" value={id} />
-              <div className="text-xs font-bold uppercase">Image sticker</div>
-              <p className="mt-1 text-xs opacity-100">
-                Paste an image (works with iPhone Stickers App after copying) or pick a file. PNG/JPG/WEBP/GIF, 6MB max.
-              </p>
-              <PasteImageField />
-              <button className="brutal-btn-primary mt-3 w-full" type="submit">Slap it on</button>
-            </form>
-          </div>
+          <form action={postComment} encType="multipart/form-data" className="mt-4 brutal-card-inner space-y-2">
+            <textarea
+              name="body"
+              rows={2}
+              maxLength={MAX_COMMENT_LEN}
+              placeholder="Say something. @Name to ping someone."
+              className="brutal-input"
+            />
+            <PasteImageField />
+            <input type="hidden" name="fixture_id" value={id} />
+            <div className="flex justify-end">
+              <button type="submit" className="brutal-btn-primary">Send</button>
+            </div>
+          </form>
         ) : (
-          <p className="mt-3 text-sm">
-            <Link href="/login" className="underline">Sign in</Link> to drop stickers.
+          <p className="mt-4 text-sm">
+            <Link href="/login" className="brutal-link">Sign in</Link> to join the chat.
           </p>
         )}
-        {err && <p className="mt-3 brutal-error">{err}</p>}
       </div>
 
       <div className="brutal-card">
@@ -318,52 +472,6 @@ export default async function MatchPage({
           </ul>
         </div>
       )}
-    </div>
-  );
-}
-
-function StickerCanvas({
-  stickers,
-  fixtureId,
-  currentUserId,
-  isAdmin,
-}: {
-  stickers: Array<{ id: number; kind: string; content: string | null; filePath: string | null; posX: number; posY: number; userId: number; userName: string | null }>;
-  fixtureId: number;
-  currentUserId: number | undefined;
-  isAdmin: boolean;
-}) {
-  return (
-    <div className="brutal-canvas relative mt-3 aspect-[2/1] w-full overflow-hidden">
-      {stickers.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-sm opacity-50">
-          No stickers yet — be the first.
-        </div>
-      )}
-      {stickers.map((s) => {
-        const canDelete = currentUserId != null && (s.userId === currentUserId || isAdmin);
-        return (
-          <div
-            key={s.id}
-            className="group absolute -translate-x-1/2 -translate-y-1/2"
-            style={{ left: `${s.posX}%`, top: `${s.posY}%` }}
-            title={`from ${s.userName ?? 'someone'}`}
-          >
-            {s.kind === 'emoji' && <span className="select-none text-5xl drop-shadow-[3px_3px_0_#000]">{s.content}</span>}
-            {s.kind === 'image' && s.filePath && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={s.filePath} alt="" className="h-20 w-20 border-[3px] border-black object-cover shadow-[4px_4px_0_#000]" />
-            )}
-            {canDelete && (
-              <form action={removeSticker} className="absolute -right-3 -top-3 opacity-0 group-hover:opacity-100">
-                <input type="hidden" name="sticker_id" value={s.id} />
-                <input type="hidden" name="fixture_id" value={fixtureId} />
-                <button className="rounded-full bg-black px-1.5 text-xs text-white" type="submit" aria-label="remove">×</button>
-              </form>
-            )}
-          </div>
-        );
-      })}
     </div>
   );
 }
