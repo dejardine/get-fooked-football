@@ -4,6 +4,7 @@ import { getSession } from '@/lib/session';
 import { computeTeamScores } from '@/lib/scoring';
 import { tagClassForGroup } from '@/lib/group-color';
 import { avatarFor } from '@/lib/avatar';
+import { displayName } from '@/lib/display-name';
 import { Avatar } from '../_avatar';
 import Link from 'next/link';
 
@@ -107,8 +108,8 @@ export default async function MyTeamsPage() {
                   <tr key={user.id} className="border-t border-current">
                     <td className="py-2 font-bold">
                       <span className="inline-flex items-center gap-2">
-                        <Avatar src={avatarFor({ email: user.email, avatarUrl: user.avatarUrl }, 48)} name={user.name} size={24} />
-                        {user.name}{user.id === session.userId ? ' (you)' : ''}
+                        <Avatar src={avatarFor({ email: user.email, avatarUrl: user.avatarUrl }, 48)} name={displayName(user)} size={24} />
+                        {displayName(user)}{user.id === session.userId ? ' (you)' : ''}
                       </span>
                     </td>
                     <td className="text-right tabular-nums">{pt.length}</td>

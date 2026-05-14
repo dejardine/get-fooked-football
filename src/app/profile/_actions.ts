@@ -38,6 +38,25 @@ export async function uploadAvatarAction(formData: FormData) {
   redirect(`${redirectBase}?ok=1`);
 }
 
+/**
+ * Set (or clear) the target user's public nickname. Empty/whitespace = clear.
+ * Cap to ~30 chars to keep it from blowing out the layout.
+ */
+export async function setNicknameAction(formData: FormData) {
+  const s = await getSession();
+  if (!s.userId) redirect('/login');
+
+  const rawTarget = Number(formData.get('target_user_id'));
+  const targetId = Number.isFinite(rawTarget) && rawTarget > 0 ? rawTarget : s.userId!;
+  const redirectBase = targetId === s.userId ? '/profile' : `/profile/${targetId}`;
+
+  const raw = String(formData.get('nickname') ?? '').trim().slice(0, 30);
+  const nickname = raw.length > 0 ? raw : null;
+
+  await db.update(schema.users).set({ nickname }).where(eq(schema.users.id, targetId));
+  redirect(`${redirectBase}?ok=1`);
+}
+
 /** Clear the avatar back to the Gravatar fallback for the target user. */
 export async function clearAvatarAction(formData: FormData) {
   const s = await getSession();

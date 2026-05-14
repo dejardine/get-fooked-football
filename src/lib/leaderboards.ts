@@ -1,6 +1,7 @@
 import { db, schema } from '@/db/client';
 import { computeTeamScores } from './scoring';
 import { avatarFor } from './avatar';
+import { displayName } from './display-name';
 import type { Fixture, Team, User } from '@/db/schema';
 
 export { BOARD_META } from './leaderboards-types';
@@ -14,7 +15,7 @@ export type AssignmentInput = { teamId: number; userId: number | null; isLeftove
  */
 export function computeLeaderboard(
   kind: BoardKey,
-  users: Pick<User, 'id' | 'name' | 'email' | 'avatarUrl'>[],
+  users: Pick<User, 'id' | 'name' | 'nickname' | 'email' | 'avatarUrl'>[],
   teams: Pick<Team, 'id' | 'population' | 'sheep' | 'fifaRank'>[],
   assignments: AssignmentInput[],
   fixtures: Fixture[],
@@ -34,7 +35,7 @@ export function computeLeaderboard(
   for (const u of users) {
     rows.set(u.id, {
       userId: u.id,
-      name: u.name,
+      name: displayName({ name: u.name, nickname: u.nickname }),
       avatarSrc: avatarFor({ email: u.email, avatarUrl: u.avatarUrl ?? null }, 48),
       teamCount: 0,
       points: 0,

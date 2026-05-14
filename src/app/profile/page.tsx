@@ -4,7 +4,8 @@ import { db, schema } from '@/db/client';
 import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/session';
 import { avatarFor, gravatarUrl } from '@/lib/avatar';
-import { clearAvatarAction, uploadAvatarAction } from './_actions';
+import { displayName, nicknameOnly } from '@/lib/display-name';
+import { clearAvatarAction, setNicknameAction, uploadAvatarAction } from './_actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   // session cookie is stale (e.g. user updated in another tab).
   const rows = await db.select().from(schema.users).where(eq(schema.users.id, session.userId!)).limit(1);
   const me = rows[0]!;
+  const meDisplay = displayName(me);
+  const meNick = nicknameOnly(me);
   const current = avatarFor({ email: me.email, avatarUrl: me.avatarUrl }, 240);
   const gravatar = gravatarUrl(me.email, 240);
   const usingGravatar = !me.avatarUrl;
@@ -76,6 +79,30 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             </div>
           )}
         </div>
+      </div>
+
+      <div className="brutal-card">
+        <h2 className="brutal-h2">Nickname</h2>
+        <p className="text-sm mt-2 opacity-100">
+          Your own nickname (shows alongside your name everywhere). Leave blank to clear. Anyone else can also set this
+          on you via /profile/&lt;your-id&gt; — fair warning.
+        </p>
+        <form action={setNicknameAction} className="mt-3 flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            name="nickname"
+            defaultValue={meNick ?? ''}
+            maxLength={30}
+            placeholder='e.g. "Sheep Lord"'
+            className="brutal-input flex-1 min-w-[16rem]"
+          />
+          <button type="submit" className="brutal-btn-primary">Save nickname</button>
+        </form>
+        {meNick && (
+          <p className="mt-3 text-xs opacity-100">
+            Currently renders as <strong>{meDisplay}</strong>
+          </p>
+        )}
       </div>
 
       <div className="brutal-card">

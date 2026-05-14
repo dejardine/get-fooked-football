@@ -9,6 +9,9 @@ export const users = pgTable(
     passwordHash: text('password_hash').notNull(),
     isAdmin: boolean('is_admin').notNull().default(false),
     paid: boolean('paid').notNull().default(false),
+    /** Public nickname, rendered alongside the real name. Anyone can set
+     *  anyone's via /profile/<id> — chaos easter egg, no audit trail. */
+    nickname: text('nickname'),
     /** /uploads/<file> path to a self-uploaded avatar. Null => Gravatar. */
     avatarUrl: text('avatar_url'),
     /** NZD this user has pledged to the pot. Clamped to BUY_IN_MIN..BUY_IN_MAX. */

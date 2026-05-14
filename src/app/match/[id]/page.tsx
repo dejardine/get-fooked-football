@@ -9,6 +9,7 @@ import { saveUploadedImage } from '@/lib/uploads';
 import { pointsForFixture } from '@/lib/scoring';
 import { fmtNzDateTime, nzZoneAbbr } from '@/lib/format';
 import { avatarFor } from '@/lib/avatar';
+import { displayName } from '@/lib/display-name';
 import {
   aggregateReactions,
   clampEmoji,
@@ -180,6 +181,7 @@ export default async function MatchPage({
       createdAt: schema.matchComments.createdAt,
       userId: schema.matchComments.userId,
       userName: schema.users.name,
+      userNickname: schema.users.nickname,
       userEmail: schema.users.email,
       userAvatar: schema.users.avatarUrl,
     })
@@ -198,6 +200,7 @@ export default async function MatchPage({
             emoji: schema.commentReactions.emoji,
             userId: schema.commentReactions.userId,
             userName: schema.users.name,
+            userNickname: schema.users.nickname,
           })
           .from(schema.commentReactions)
           .leftJoin(schema.users, eq(schema.users.id, schema.commentReactions.userId))
@@ -208,7 +211,10 @@ export default async function MatchPage({
   const reactionsByComment = new Map<number, Array<{ emoji: string; userId: number; userName: string }>>();
   for (const r of reactionRows) {
     const arr = reactionsByComment.get(r.commentId) ?? [];
-    arr.push({ emoji: r.emoji, userId: r.userId, userName: r.userName ?? '?' });
+    const renderedName = r.userName
+      ? displayName({ name: r.userName, nickname: r.userNickname })
+      : '?';
+    arr.push({ emoji: r.emoji, userId: r.userId, userName: renderedName });
     reactionsByComment.set(r.commentId, arr);
   }
 
@@ -275,17 +281,20 @@ export default async function MatchPage({
             const aggs = aggregateReactions(reactionsByComment.get(c.id) ?? [], session.userId ?? null);
             const spans = parseMentions(c.body, allUsers);
             const canDelete = session.userId != null && (c.userId === session.userId || session.isAdmin);
+            const commenter = c.userName
+              ? displayName({ name: c.userName, nickname: c.userNickname })
+              : 'someone';
             return (
               <li key={c.id} className="border-[3px] border-current p-3">
                 <div className="flex items-start gap-3">
                   <Avatar
                     src={avatarFor({ email: c.userEmail ?? '', avatarUrl: c.userAvatar ?? null }, 48)}
-                    name={c.userName ?? 'someone'}
+                    name={commenter}
                     size={28}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline flex-wrap gap-2">
-                      <span className="font-bold">{c.userName ?? 'someone'}</span>
+                      <span className="font-bold">{commenter}</span>
                       <span className="text-xs opacity-100">{fmtNzDateTime(c.createdAt)}</span>
                     </div>
                     {c.body && (

@@ -5,7 +5,8 @@ import { db, schema } from '@/db/client';
 import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/session';
 import { avatarFor, gravatarUrl } from '@/lib/avatar';
-import { clearAvatarAction, uploadAvatarAction } from '../_actions';
+import { clearAvatarAction, setNicknameAction, uploadAvatarAction } from '../_actions';
+import { displayName, nicknameOnly } from '@/lib/display-name';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,8 @@ export default async function HijackProfilePage({
   if (!target) notFound();
 
   const isSelf = targetId === session.userId;
+  const targetDisplay = displayName(target);
+  const targetNick = nicknameOnly(target);
   const current = avatarFor({ email: target.email, avatarUrl: target.avatarUrl }, 240);
   const gravatar = gravatarUrl(target.email, 240);
   const usingGravatar = !target.avatarUrl;
@@ -50,15 +53,15 @@ export default async function HijackProfilePage({
     <div className="space-y-6">
       <div className="brutal-card">
         <h1 className="brutal-h1 brutal-heading-magenta">
-          {isSelf ? 'Profile' : `Hijacking ${target.name}`}
+          {isSelf ? 'Profile' : `Hijacking ${targetDisplay}`}
         </h1>
         <p className="text-sm mt-2">
           {isSelf ? (
             <>This is your profile.</>
           ) : (
             <>
-              You are about to mess with <strong>{target.name}</strong>&rsquo;s photo. Use this power wisely — there is{' '}
-              <em>no audit log</em>, no notification, and no one stopping you.{' '}
+              You are about to mess with <strong>{targetDisplay}</strong>&rsquo;s identity. Use this power wisely — there
+              is <em>no audit log</em>, no notification, and no one stopping you.{' '}
               <Link className="brutal-link" href="/profile">Back to your own profile</Link>.
             </>
           )}
@@ -98,6 +101,34 @@ export default async function HijackProfilePage({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="brutal-card">
+        <h2 className="brutal-h2">Nickname</h2>
+        <p className="text-sm mt-2 opacity-100">
+          {isSelf
+            ? 'Your own nickname (shows up alongside your name everywhere).'
+            : `Whatever you put here renders alongside ${target.name}'s real name everywhere in the app. Leave blank to clear.`}
+        </p>
+        <form action={setNicknameAction} className="mt-3 flex flex-wrap items-center gap-3">
+          <input type="hidden" name="target_user_id" value={target.id} />
+          <input
+            type="text"
+            name="nickname"
+            defaultValue={targetNick ?? ''}
+            maxLength={30}
+            placeholder='e.g. "Sheep Lord"'
+            className="brutal-input flex-1 min-w-[16rem]"
+          />
+          <button type="submit" className={isSelf ? 'brutal-btn-primary' : 'brutal-btn-pink'}>
+            {isSelf ? 'Save nickname' : `Tag ${target.name}`}
+          </button>
+        </form>
+        {targetNick && (
+          <p className="mt-3 text-xs opacity-100">
+            Currently renders as <strong>{targetDisplay}</strong>
+          </p>
+        )}
       </div>
 
       <div className="brutal-card">

@@ -11,6 +11,7 @@ import { db, schema } from '@/db/client';
 import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { avatarFor } from '@/lib/avatar';
+import { displayName } from '@/lib/display-name';
 
 export const metadata: Metadata = {
   title: 'Get Fooked — 2026 World Cup tipping',
@@ -57,24 +58,34 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Path comes from middleware (x-pathname). API/_next requests are excluded
   // by the middleware matcher so we never see them here.
   let needsOnboarding = false;
+  // Read fresh from the DB so the header reflects whatever the latest
+  // nickname / avatar setting is — including someone else hijacking the
+  // current user from /profile/<id>. Session is just for ids + roles.
+  let meRow: { name: string; nickname: string | null; avatarUrl: string | null; email: string; onboardedAt: Date | null } | null = null;
   if (session?.userId) {
     try {
       const h = await headers();
       const pathname = h.get('x-pathname') ?? '/';
       const exempt = ONBOARDING_ALLOWLIST.has(pathname) || pathname.startsWith('/api/');
-      if (!exempt) {
-        const [me] = await db
-          .select({ onboardedAt: schema.users.onboardedAt })
-          .from(schema.users)
-          .where(eq(schema.users.id, session.userId))
-          .limit(1);
-        if (me && !me.onboardedAt) needsOnboarding = true;
-      }
+      const [me] = await db
+        .select({
+          name: schema.users.name,
+          nickname: schema.users.nickname,
+          avatarUrl: schema.users.avatarUrl,
+          email: schema.users.email,
+          onboardedAt: schema.users.onboardedAt,
+        })
+        .from(schema.users)
+        .where(eq(schema.users.id, session.userId))
+        .limit(1);
+      meRow = me ?? null;
+      if (!exempt && me && !me.onboardedAt) needsOnboarding = true;
     } catch {
       // DB hiccup in the gate shouldn't blank the whole app.
     }
   }
   if (needsOnboarding) redirect('/onboarding');
+  const meDisplay = meRow ? displayName(meRow) : (session?.name ?? '');
 
   return (
     <html lang="en">
@@ -111,11 +122,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <>
                   <Link href="/profile" className="flex items-center gap-2 hover:bg-cga-cyan hover:text-cga-black px-1 py-1" title="Edit profile">
                     <Avatar
-                      src={avatarFor({ email: session.email ?? '', avatarUrl: session.avatarUrl ?? null }, 56)}
-                      name={session.name}
+                      src={avatarFor({ email: meRow?.email ?? session.email ?? '', avatarUrl: meRow?.avatarUrl ?? session.avatarUrl ?? null }, 56)}
+                      name={meDisplay}
                       size={28}
                     />
-                    <span className="hidden sm:inline font-bold">{session.name}</span>
+                    <span className="hidden sm:inline font-bold">{meDisplay}</span>
                   </Link>
                   {session.isAdmin && (
                     <Link className="border-[3px] border-current px-2 py-1 text-xs font-bold uppercase hover:bg-cga-cyan hover:text-cga-black" href="/admin">
