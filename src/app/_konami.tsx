@@ -42,14 +42,30 @@ export function Konami() {
   const close = useCallback(() => setOpen(false), []);
 
   useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('[konami] listener attached. press ↑↑↓↓←→←→BA, or window.__openFlappy()');
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      const inField =
+        !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      if (inField) {
+        // eslint-disable-next-line no-console
+        console.log('[konami] key skipped — focus is in', t!.tagName, e.key);
+        return;
+      }
+      const raw = e.key;
+      const key = raw.length === 1 ? raw.toLowerCase() : raw;
       buffer.current.push(key);
       if (buffer.current.length > SEQUENCE.length) {
         buffer.current = buffer.current.slice(-SEQUENCE.length);
       }
+      const expectedNext = SEQUENCE[Math.min(buffer.current.length - 1, SEQUENCE.length - 1)];
+      // eslint-disable-next-line no-console
+      console.log(
+        `[konami] key=${JSON.stringify(raw)} -> ${JSON.stringify(key)} | buffer=[${buffer.current
+          .map((k) => JSON.stringify(k))
+          .join(', ')}] | expected next=${JSON.stringify(expectedNext)}`,
+      );
       if (buffer.current.length === SEQUENCE.length) {
         let match = true;
         for (let i = 0; i < SEQUENCE.length; i++) {
