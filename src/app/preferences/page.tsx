@@ -118,6 +118,11 @@ export default async function PreferencesPage({ searchParams }: { searchParams: 
           <li>Balanced fill: the remaining slots get filled to even out total Polymarket odds across players.</li>
           <li>Leftovers: anything that doesn't fit goes to the leftover pool (Wooden Spoon, Cinderella Cup, etc.).</li>
         </ol>
+        <p className="mt-3 text-sm">
+          <strong>Clashes:</strong> when two players want the same team, the tie goes to whoever
+          ranks higher on the <em>Flappy</em> leaderboard — they get the team, you drop to your
+          next pick. Never played Flappy? You sort last. Git gud.
+        </p>
       </div>
     </div>
   );

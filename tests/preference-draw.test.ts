@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { planPreferenceDraw, type DrawTeam, type DrawPlayer } from '@/lib/preference-draw';
+import {
+  planPreferenceDraw,
+  orderPlayersByFlappyRank,
+  type DrawTeam,
+  type DrawPlayer,
+} from '@/lib/preference-draw';
 import { mulberry32 } from '@/lib/draw';
 
 // Build a 48-team field with a clean odds gradient — team 1 has the highest
@@ -90,6 +95,63 @@ describe('planPreferenceDraw — preferences honored', () => {
     const { assignments } = planPreferenceDraw({ teams, players, rng: mulberry32(99) });
     expect(assignments.find((a) => a.teamId === 1)?.userId).toBe(1);
     expect(assignments.find((a) => a.teamId === 2)?.userId).toBe(2);
+  });
+
+  it('breaks a contested preference toward the higher flappy rank, loser falls to next pref', () => {
+    const teams = buildField();
+    const players = makePlayers(7, {
+      1: [1, 2, 3],
+      2: [1, 2, 3], // both want team 1
+    });
+    // Player 2 sits above player 1 on the flappy board, so they win the tie.
+    const { assignments } = planPreferenceDraw({
+      teams,
+      players,
+      rng: mulberry32(99),
+      flappyRanking: [2, 1],
+    });
+    expect(assignments.find((a) => a.teamId === 1)?.userId).toBe(2);
+    expect(assignments.find((a) => a.teamId === 2)?.userId).toBe(1);
+  });
+
+  it('falls back to id order when there is no flappy ranking (unchanged behaviour)', () => {
+    const teams = buildField();
+    const players = makePlayers(7, { 1: [1, 2, 3], 2: [1, 2, 3] });
+    const a = planPreferenceDraw({ teams, players, rng: mulberry32(99) });
+    const b = planPreferenceDraw({ teams, players, rng: mulberry32(99), flappyRanking: [] });
+    expect(b.assignments).toEqual(a.assignments);
+  });
+});
+
+describe('orderPlayersByFlappyRank', () => {
+  const players: DrawPlayer[] = [1, 2, 3, 4].map((id) => ({ id, preferences: [] }));
+
+  it('orders ranked players best-first, with unranked players last by id', () => {
+    // flappy board: player 3 best, then player 1. 2 and 4 never played.
+    const ordered = orderPlayersByFlappyRank(players, [3, 1]);
+    expect(ordered.map((p) => p.id)).toEqual([3, 1, 2, 4]);
+  });
+
+  it('keeps the input order untouched when no ranking is supplied', () => {
+    const ordered = orderPlayersByFlappyRank(players, []);
+    expect(ordered.map((p) => p.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('breaks ties among unranked players deterministically by id', () => {
+    const shuffled: DrawPlayer[] = [4, 2, 1, 3].map((id) => ({ id, preferences: [] }));
+    const ordered = orderPlayersByFlappyRank(shuffled, [3]);
+    expect(ordered.map((p) => p.id)).toEqual([3, 1, 2, 4]);
+  });
+
+  it('ignores ranked ids that are not among the players', () => {
+    const ordered = orderPlayersByFlappyRank(players, [99, 2]);
+    expect(ordered.map((p) => p.id)).toEqual([2, 1, 3, 4]);
+  });
+
+  it('does not mutate the input array', () => {
+    const input: DrawPlayer[] = [1, 2, 3].map((id) => ({ id, preferences: [] }));
+    orderPlayersByFlappyRank(input, [3, 1]);
+    expect(input.map((p) => p.id)).toEqual([1, 2, 3]);
   });
 });
 
