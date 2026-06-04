@@ -2,6 +2,8 @@ import { db, schema } from '@/db/client';
 import { asc } from 'drizzle-orm';
 import { prizePotShare, totalAllocatedPct, splitPrizePayout, computeSlushFund } from '@/lib/prizes';
 import { computePot, topBuyIn } from '@/lib/buy-in';
+import { getSession } from '@/lib/session';
+import { SlushFlicker } from './_slush-flicker';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +27,12 @@ export default async function PrizesPage() {
   const topBuy = topBuyIn(players);
   const buyInById = new Map(players.map((p) => [p.id, Number(p.buyIn)]));
 
+  // Who's looking? If they pledged under the top, every prize is shown at the
+  // capped amount they'd personally take home.
+  const session = await getSession();
+  const viewerBuyIn = session.userId != null ? buyInById.get(session.userId) ?? null : null;
+  const viewerCapped = viewerBuyIn != null && topBuy > 0 && viewerBuyIn < topBuy;
+
   const decoratedPrizes = prizes.map((p) => {
     const pctNum = Number(p.pctOfPot);
     const gross = prizePotShare(pctNum, pot);
@@ -33,7 +41,11 @@ export default async function PrizesPage() {
     const winnerBuyIn = p.awardedUserId != null ? buyInById.get(p.awardedUserId) ?? 0 : null;
     const split =
       winnerBuyIn != null ? splitPrizePayout(gross, winnerBuyIn, topBuy) : null;
-    return { ...p, pctNum, gross, winnerBuyIn, split };
+    // What this prize is worth to the current viewer, given their own pledge.
+    const viewerAmount = viewerCapped
+      ? splitPrizePayout(gross, viewerBuyIn as number, topBuy).paid
+      : gross;
+    return { ...p, pctNum, gross, winnerBuyIn, split, viewerAmount };
   });
   const allocatedPct = totalAllocatedPct(decoratedPrizes.map((p) => ({ pctOfPot: p.pctNum })));
 
@@ -43,6 +55,15 @@ export default async function PrizesPage() {
       .map((p) => ({ gross: p.gross, winnerBuyIn: p.winnerBuyIn as number })),
     topBuy,
   );
+  // The slush total isn't settled until every prize is awarded — anything still
+  // up for grabs could add up to its full gross (if a cheap cunt wins it) or
+  // nothing (if a rich cunt does). Flicker between the locked floor and that
+  // ceiling to show it's still in play.
+  const unawardedGross = decoratedPrizes
+    .filter((p) => p.winnerBuyIn == null)
+    .reduce((s, p) => s + p.gross, 0);
+  const slushFloor = slushFund;
+  const slushCeiling = slushFund + unawardedGross;
 
   const grouped = new Map<string, typeof decoratedPrizes>();
   for (const p of decoratedPrizes) {
@@ -85,7 +106,12 @@ export default async function PrizesPage() {
                   <li key={p.id} className="flex items-start gap-3 border-[3px] border-current p-3">
                     <div className="min-w-[5rem] text-center">
                       <div className="text-2xl font-bold tabular-nums">{p.pctNum.toFixed(p.pctNum % 1 === 0 ? 0 : 1)}%</div>
-                      <div className="text-xs opacity-100">= ${p.gross}</div>
+                      <div className="text-xs opacity-100">= ${p.viewerAmount}</div>
+                      {viewerCapped && (
+                        <div className="text-[0.65rem] leading-tight opacity-100 mt-0.5">
+                          (based on your contribution of ${viewerBuyIn})
+                        </div>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-bold uppercase">{p.name}</div>
@@ -111,16 +137,20 @@ export default async function PrizesPage() {
         <h2 className="brutal-h2">Slush fund — beers for the lads cos you are a cheap cunt</h2>
         <ul className="mt-3 space-y-2">
           <li className="flex items-start gap-3 border-[3px] border-current p-3">
-            <div className="min-w-[5rem] text-center">
-              <div className="text-2xl font-bold tabular-nums">${slushFund}</div>
-              <div className="text-xs opacity-100">so far</div>
+            <div className="min-w-[6rem] text-center">
+              <div className="text-2xl font-bold tabular-nums">
+                <SlushFlicker min={slushFloor} max={slushCeiling} />
+              </div>
+              <div className="text-xs opacity-100">{slushCeiling > slushFloor ? 'leftovers (live)' : 'settled'}</div>
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-bold uppercase">Beers for the lads</div>
               <div className="text-sm opacity-100">
-                Holds the remainder. Every dollar a tight-arse leaves on the table by pledging
-                under the ${topBuy} top buy-in lands here and gets spent on beers for everyone.
-                Pledge the max and none of your winnings ever end up in this pot.
+                Depending on whether or not the other prizes are won by rich cunts or cheap
+                cunts, the slush fund will hold the leftovers. Every dollar a tight-arse leaves
+                on the table by pledging under the ${topBuy} top buy-in lands here and gets spent
+                on beers for everyone. Pledge the max and none of your winnings ever end up in
+                this pot.
               </div>
             </div>
           </li>
