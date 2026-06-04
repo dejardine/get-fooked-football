@@ -38,12 +38,44 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
   return a;
 }
 
+/**
+ * Order players so that contested preferences resolve by flappy-leaderboard
+ * standing: when two players want the same team, whoever ranks higher on the
+ * Flappy board gets first dibs and the other falls through to their next
+ * preference. `flappyRanking` is the list of userIds best→worst (i.e. the
+ * personal-bests board order). Players with no flappy score sort last, in a
+ * deterministic ascending-id order so the same board always yields the same
+ * draw. An empty ranking is a no-op — the input order is preserved.
+ */
+export function orderPlayersByFlappyRank<T extends { id: number }>(
+  players: T[],
+  flappyRanking: number[],
+): T[] {
+  if (flappyRanking.length === 0) return players.slice();
+  const rankOf = new Map(flappyRanking.map((id, i) => [id, i] as const));
+  return players.slice().sort((a, b) => {
+    const ra = rankOf.has(a.id) ? rankOf.get(a.id)! : Infinity;
+    const rb = rankOf.has(b.id) ? rankOf.get(b.id)! : Infinity;
+    if (ra !== rb) return ra - rb;
+    return a.id - b.id;
+  });
+}
+
 export function planPreferenceDraw(opts: {
   teams: DrawTeam[];
   players: DrawPlayer[];
   rng: () => number;
+  /**
+   * Flappy-leaderboard order (userIds best→worst). Used to break contested
+   * preferences — higher flappy rank wins the team, the loser drops to their
+   * next preference. Omit (or pass []) to fall back to input order.
+   */
+  flappyRanking?: number[];
 }): DrawResult {
-  const { teams, players, rng } = opts;
+  const { teams, rng } = opts;
+  // Draw players in flappy-rank order so head-to-head preference clashes go to
+  // whoever's higher on the Flappy board.
+  const players = orderPlayersByFlappyRank(opts.players, opts.flappyRanking ?? []);
   if (players.length === 0) throw new Error('No players registered');
   if (teams.length === 0) throw new Error('No teams to draw');
 

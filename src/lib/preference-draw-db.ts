@@ -4,6 +4,7 @@ import { fetchEvent } from '@/lib/polymarket';
 import { matchPolymarketName } from '@/lib/polymarket-match';
 import { planPreferenceDraw, type DrawPlayer, type DrawTeam } from '@/lib/preference-draw';
 import { mulberry32 } from '@/lib/draw';
+import { rankPersonalBests, type FlappyScoreRow } from '@/lib/flappy';
 
 /**
  * DB-aware wrapper around planPreferenceDraw. Loads players + preferences +
@@ -12,10 +13,21 @@ import { mulberry32 } from '@/lib/draw';
  * Replaces any existing draw — same semantics as the old runRandomDraw.
  */
 export async function runPreferenceDraw(seed?: number): Promise<ReturnType<typeof planPreferenceDraw>> {
-  const [users, teams, prefs] = await Promise.all([
+  const [users, teams, prefs, flappy] = await Promise.all([
     db.select().from(schema.users),
     db.select().from(schema.teams),
     db.select().from(schema.teamPreferences),
+    db
+      .select({
+        userId: schema.flappyScores.userId,
+        survivedMs: schema.flappyScores.survivedMs,
+        pipesCleared: schema.flappyScores.pipesCleared,
+        createdAt: schema.flappyScores.createdAt,
+        name: schema.users.name,
+        nickname: schema.users.nickname,
+      })
+      .from(schema.flappyScores)
+      .leftJoin(schema.users, eq(schema.users.id, schema.flappyScores.userId)),
   ]);
 
   const prefsByUser = new Map<number, number[]>();
@@ -31,8 +43,22 @@ export async function runPreferenceDraw(seed?: number): Promise<ReturnType<typeo
   }));
   const drawTeams: DrawTeam[] = teams.map((t) => ({ id: t.id, polymarketPrice: t.polymarketPrice }));
 
+  // Flappy-board standing breaks contested preferences: best flappy score wins
+  // the team, the loser drops to their next pick. Players with no score sort
+  // last (handled in orderPlayersByFlappyRank).
+  const flappyRows: FlappyScoreRow[] = flappy
+    .filter((r) => r.name != null)
+    .map((r) => ({
+      userId: r.userId,
+      survivedMs: r.survivedMs,
+      pipesCleared: r.pipesCleared,
+      createdAt: r.createdAt,
+      user: { id: r.userId, name: r.name!, nickname: r.nickname },
+    }));
+  const flappyRanking = rankPersonalBests(flappyRows).map((b) => b.userId);
+
   const rng = seed != null ? mulberry32(seed) : Math.random;
-  const result = planPreferenceDraw({ teams: drawTeams, players, rng });
+  const result = planPreferenceDraw({ teams: drawTeams, players, rng, flappyRanking });
 
   await db.transaction(async (tx) => {
     await tx.delete(schema.teamAssignments);
