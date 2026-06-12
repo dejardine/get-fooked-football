@@ -64,10 +64,18 @@ body::before {
 }
 
 main,
-header,
 footer {
   position: relative;
   z-index: 1;
+}
+
+/* Header outranks <main>/<footer> (each its own z:1 stacking context) so the
+   avatar dropdown layers above every card on the page. Anything that must beat
+   the header too — e.g. the How-it-works modal — portals to <body> with a
+   max z-index. */
+header {
+  position: relative;
+  z-index: 40;
 }
 
 /* ------------------------------------------------------------------
