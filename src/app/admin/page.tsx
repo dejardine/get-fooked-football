@@ -11,6 +11,8 @@ import { fmtNzDateTime, nzZoneAbbr } from '@/lib/format';
 import { getCurrentGroupInvite, rollGroupInvite } from '@/lib/group-invite-db';
 import { formatTimeRemaining, validateInvite } from '@/lib/group-invite';
 import { logAudit } from '@/lib/audit';
+import { planBracketUpdate } from '@/lib/bracket';
+import { runResultsSync } from '@/lib/results-sync-db';
 import { OnboardingTab } from './_onboarding-tab';
 import { AuditTab } from './_audit-tab';
 
@@ -83,6 +85,75 @@ async function setFixtureResult(formData: FormData) {
   redirect('/admin?tab=results');
 }
 
+async function loadBracketInputs() {
+  const [teams, fixtures] = await Promise.all([
+    db.select().from(schema.teams),
+    db.select().from(schema.fixtures),
+  ]);
+  return { teams, fixtures };
+}
+
+async function doResultsSync() {
+  'use server';
+  await requireAdmin();
+  // Clanker attributes its own edits; no admin userId is recorded.
+  let r: Awaited<ReturnType<typeof runResultsSync>>;
+  try {
+    r = await runResultsSync();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'sync failed';
+    redirect(`/admin?tab=results&err=${encodeURIComponent(msg)}`);
+  }
+  redirect(
+    `/admin?tab=results&synced=${r.updated}&needsPens=${r.skipped['needs-pens']}&protectedCount=${r.skipped['human-edited']}`,
+  );
+}
+
+async function applyBracketFills() {
+  'use server';
+  const s = await requireAdmin();
+  // Recompute server-side rather than trusting anything from the form.
+  const { teams, fixtures } = await loadBracketInputs();
+  const { fills } = planBracketUpdate(fixtures, teams);
+  for (const fill of fills) {
+    await db
+      .update(schema.fixtures)
+      .set(fill.side === 'home' ? { homeTeamId: fill.teamId } : { awayTeamId: fill.teamId })
+      .where(eq(schema.fixtures.id, fill.fixtureId));
+  }
+  await logAudit({
+    userId: s.userId!,
+    kind: 'bracket.autofill',
+    detail: `${fills.length} slot${fills.length === 1 ? '' : 's'}`,
+  });
+  redirect('/admin?tab=results');
+}
+
+async function applyThirdChoice(formData: FormData) {
+  'use server';
+  const s = await requireAdmin();
+  const fixtureId = Number(formData.get('fixture_id'));
+  const side = String(formData.get('side')) === 'away' ? ('away' as const) : ('home' as const);
+  const teamId = Number(formData.get('team_id'));
+  const { teams, fixtures } = await loadBracketInputs();
+  const choice = planBracketUpdate(fixtures, teams).choices.find(
+    (c) => c.fixtureId === fixtureId && c.side === side,
+  );
+  if (!choice || !choice.candidateTeamIds.includes(teamId)) {
+    redirect(`/admin?tab=results&err=${encodeURIComponent('Not a valid third-place pick for that slot')}`);
+  }
+  await db
+    .update(schema.fixtures)
+    .set(side === 'home' ? { homeTeamId: teamId } : { awayTeamId: teamId })
+    .where(eq(schema.fixtures.id, fixtureId));
+  await logAudit({
+    userId: s.userId!,
+    kind: 'bracket.third',
+    detail: `fixture=${fixtureId} side=${side} team=${teamId}`,
+  });
+  redirect('/admin?tab=results');
+}
+
 async function setFixtureTeams(formData: FormData) {
   'use server';
   await requireAdmin();
@@ -148,10 +219,10 @@ const TAB_IDS = new Set<string>(TABS.map((t) => t.id));
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; err?: string; synced?: string; needsPens?: string; protectedCount?: string }>;
 }) {
   await requireAdmin();
-  const { tab: rawTab } = await searchParams;
+  const { tab: rawTab, err, synced, needsPens, protectedCount } = await searchParams;
   const tab: TabId = (rawTab && TAB_IDS.has(rawTab) ? rawTab : 'players') as TabId;
 
   const [users, groupInvite, teams, fixtures, prizes, assignments] = await Promise.all([
@@ -164,6 +235,8 @@ export default async function AdminPage({
   ]);
   const teamById = new Map(teams.map((t) => [t.id, t]));
   const userById = new Map(users.map((u) => [u.id, u]));
+  const fixtureById = new Map(fixtures.map((f) => [f.id, f]));
+  const bracketPlan = planBracketUpdate(fixtures, teams);
 
   // Build the share URL from the incoming request so it matches whatever
   // domain Railway is currently serving from. Falls back to the path-only
@@ -340,8 +413,82 @@ export default async function AdminPage({
       {/* Results ---------------------------------------------------------- */}
       {tab === 'results' && (
       <section className="brutal-card">
-        <h2 className="mb-3 text-lg font-semibold">Results</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Results</h2>
+          <form action={doResultsSync}>
+            <button className="brutal-btn-cyan text-xs" type="submit" title="Auto-update finished games from TheSportsDB. Skips anything a human has edited.">
+              🤖 Sync results (clanker)
+            </button>
+          </form>
+        </div>
+        {err && <p className="brutal-error mb-3">{err}</p>}
+        {synced != null && (
+          <p className="brutal-card-inner mb-3 text-sm">
+            <strong>clanker</strong> updated <strong>{synced}</strong> fixture{synced === '1' ? '' : 's'}.
+            {Number(needsPens) > 0 && <> {needsPens} drawn KO game{needsPens === '1' ? '' : 's'} need penalties — enter those by hand.</>}
+            {Number(protectedCount) > 0 && <> {protectedCount} left untouched (human-edited).</>}
+          </p>
+        )}
         <p className="mb-3 text-sm opacity-100">Enter scores as matches finish. For KO ties, fill in penalty scores too.</p>
+        {(bracketPlan.fills.length > 0 || bracketPlan.choices.length > 0) && (
+          <div className="brutal-card-inner mb-4">
+            <h3 className="brutal-h2 mb-2">
+              <span className="brutal-tag-cyan">Bracket</span> slots ready to fill
+            </h3>
+            {bracketPlan.fills.length > 0 && (
+              <>
+                <ul className="mb-3 space-y-1 text-sm">
+                  {bracketPlan.fills.map((fill) => {
+                    const fx = fixtureById.get(fill.fixtureId);
+                    const team = teamById.get(fill.teamId);
+                    return (
+                      <li key={`${fill.fixtureId}-${fill.side}`}>
+                        <span className="font-bold">{fx?.stage}</span> {fx?.venue} · {fill.label} →{' '}
+                        {team ? `${team.flag} ${team.name}` : fill.teamId}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <form action={applyBracketFills}>
+                  <button className="brutal-btn-cyan text-xs" type="submit">
+                    Apply {bracketPlan.fills.length} fill{bracketPlan.fills.length === 1 ? '' : 's'}
+                  </button>
+                </form>
+              </>
+            )}
+            {bracketPlan.choices.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs opacity-100">
+                  Third-place slots FIFA leaves to the published bracket — pick to match the official draw:
+                </p>
+                {bracketPlan.choices.map((choice) => {
+                  const fx = fixtureById.get(choice.fixtureId);
+                  return (
+                    <form key={`${choice.fixtureId}-${choice.side}`} action={applyThirdChoice} className="flex flex-wrap items-center gap-2 text-sm">
+                      <input type="hidden" name="fixture_id" value={choice.fixtureId} />
+                      <input type="hidden" name="side" value={choice.side} />
+                      <span>
+                        <span className="font-bold">{fx?.stage}</span> {fx?.venue} · {choice.label} ({choice.side})
+                      </span>
+                      <select name="team_id" className="brutal-input w-auto text-xs" defaultValue="">
+                        <option value="" disabled>— pick third —</option>
+                        {choice.candidateTeamIds.map((id) => {
+                          const t = teamById.get(id);
+                          return (
+                            <option key={id} value={id}>
+                              {t ? `${t.flag} ${t.name} (Grp ${t.groupName})` : id}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <button className="brutal-btn-ghost text-xs" type="submit">save</button>
+                    </form>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         <div className="max-h-[60vh] overflow-y-auto pr-1">
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase opacity-100">
