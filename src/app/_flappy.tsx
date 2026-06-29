@@ -26,7 +26,7 @@ const CGA_MAGENTA = '#ff55ff';
 
 type Pipe = { x: number; gapTop: number; cleared: boolean };
 
-const PIPE_MILESTONE_INTERVAL = 5;
+const SCORE_MILESTONES = [25, 50, 75, 100];
 
 // Lazily-created, module-level so it survives the modal being closed and
 // reopened. Browsers suspend new AudioContexts until a user gesture resumes
@@ -62,7 +62,7 @@ function beep(freq: number, durationMs: number, delayMs = 0, gain = 0.06) {
   osc.stop(t1 + 0.02);
 }
 
-/** Two-note chime every PIPE_MILESTONE_INTERVAL pipes cleared. */
+/** Two-note chime played when the score hits one of SCORE_MILESTONES. */
 function playMilestoneChime() {
   beep(880, 90);
   beep(1318.5, 120, 90);
@@ -225,7 +225,7 @@ export function FlappyGame({ onClose }: { onClose: () => void }) {
                 if (!p.cleared) {
                   p.cleared = true;
                   s.pipesCleared += 1;
-                  if (s.pipesCleared % PIPE_MILESTONE_INTERVAL === 0) playMilestoneChime();
+                  if (SCORE_MILESTONES.includes(s.pipesCleared)) playMilestoneChime();
                 }
                 continue;
               }
