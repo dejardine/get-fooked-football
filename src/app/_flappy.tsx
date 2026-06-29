@@ -122,6 +122,7 @@ export function FlappyGame({ onClose }: { onClose: () => void }) {
   const [submitted, setSubmitted] = useState<SaveResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isNewBest, setIsNewBest] = useState(false);
   const [canvasCss, setCanvasCss] = useState({ w: W, h: H });
 
   // Scale the canvas to fit short mobile viewports (the fixed 360x540
@@ -173,6 +174,7 @@ export function FlappyGame({ onClose }: { onClose: () => void }) {
     setSubmitted(null);
     setSubmitError(null);
     setSubmitting(false);
+    setIsNewBest(false);
   }, []);
 
   const flap = useCallback(() => {
@@ -271,6 +273,7 @@ export function FlappyGame({ onClose }: { onClose: () => void }) {
       setSubmitted(data);
       if (data.saved.survivedMs > 0 && data.saved.survivedMs === data.myBestMs) {
         playPersonalBestFanfare();
+        setIsNewBest(true);
       }
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'failed');
@@ -331,6 +334,7 @@ export function FlappyGame({ onClose }: { onClose: () => void }) {
           submitting={submitting}
           submitError={submitError}
           submitted={submitted}
+          isNewBest={isNewBest}
           onRetry={reset}
         />
       )}
@@ -344,6 +348,7 @@ function GameOverPanel({
   submitting,
   submitError,
   submitted,
+  isNewBest,
   onRetry,
 }: {
   survivedMs: number;
@@ -351,6 +356,7 @@ function GameOverPanel({
   submitting: boolean;
   submitError: string | null;
   submitted: SaveResponse | null;
+  isNewBest: boolean;
   onRetry: () => void;
 }) {
   return (
@@ -361,6 +367,16 @@ function GameOverPanel({
       </div>
       {submitting && <div className="mt-2 text-xs opacity-100">saving…</div>}
       {submitError && <div className="mt-2 text-xs text-cga-magenta">save failed: {submitError}</div>}
+      {isNewBest && (
+        <div className="mt-2 flex flex-col items-center gap-1 border-[2px] border-cga-magenta p-2">
+          <img
+            src="/flappy-high-score.png"
+            alt="New high score!"
+            className="max-h-32 w-auto"
+          />
+          <div className="text-xs font-bold uppercase text-cga-magenta">new high score!</div>
+        </div>
+      )}
       {submitted && (
         <div className="mt-2 text-xs">
           personal best <strong>{formatMs(submitted.myBestMs)}</strong>
