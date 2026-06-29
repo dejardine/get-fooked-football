@@ -26,6 +26,56 @@ const CGA_MAGENTA = '#ff55ff';
 
 type Pipe = { x: number; gapTop: number; cleared: boolean };
 
+const PIPE_MILESTONE_INTERVAL = 5;
+
+// Lazily-created, module-level so it survives the modal being closed and
+// reopened. Browsers suspend new AudioContexts until a user gesture resumes
+// them, so `getAudioCtx` is also called from `flap()` (a real pointer/key
+// event handler) to unlock it before the first programmatic beep fires.
+let audioCtx: AudioContext | null = null;
+
+function getAudioCtx(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctor) return null;
+  if (!audioCtx) audioCtx = new Ctor();
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  return audioCtx;
+}
+
+/** A single retro square-wave blip. */
+function beep(freq: number, durationMs: number, delayMs = 0, gain = 0.06) {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime + delayMs / 1000;
+  const t1 = t0 + durationMs / 1000;
+  const osc = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  osc.type = 'square';
+  osc.frequency.value = freq;
+  gainNode.gain.setValueAtTime(0, t0);
+  gainNode.gain.linearRampToValueAtTime(gain, t0 + 0.01);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, t1);
+  osc.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t1 + 0.02);
+}
+
+/** Two-note chime every PIPE_MILESTONE_INTERVAL pipes cleared. */
+function playMilestoneChime() {
+  beep(880, 90);
+  beep(1318.5, 120, 90);
+}
+
+/** Four-note ascending fanfare for a new personal best. */
+function playPersonalBestFanfare() {
+  beep(523.25, 100, 0); // C5
+  beep(659.25, 100, 100); // E5
+  beep(783.99, 100, 200); // G5
+  beep(1046.5, 240, 300); // C6
+}
+
 type BoardRow = {
   userId: number;
   displayName: string;
@@ -127,6 +177,7 @@ export function FlappyGame({ onClose }: { onClose: () => void }) {
 
   const flap = useCallback(() => {
     const s = stateRef.current;
+    getAudioCtx(); // unlock audio on this real user gesture
     if (s.crashed) return;
     if (s.startedAt === 0) s.startedAt = performance.now();
     s.birdV = FLAP_V;
@@ -174,6 +225,7 @@ export function FlappyGame({ onClose }: { onClose: () => void }) {
                 if (!p.cleared) {
                   p.cleared = true;
                   s.pipesCleared += 1;
+                  if (s.pipesCleared % PIPE_MILESTONE_INTERVAL === 0) playMilestoneChime();
                 }
                 continue;
               }
@@ -217,6 +269,9 @@ export function FlappyGame({ onClose }: { onClose: () => void }) {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = (await r.json()) as SaveResponse;
       setSubmitted(data);
+      if (data.saved.survivedMs > 0 && data.saved.survivedMs === data.myBestMs) {
+        playPersonalBestFanfare();
+      }
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'failed');
     } finally {
